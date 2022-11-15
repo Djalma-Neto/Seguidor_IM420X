@@ -57,6 +57,24 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BTN_Pin GPIO_PIN_13
+#define BTN_GPIO_Port GPIOC
+#define Echo_Pin GPIO_PIN_0
+#define Echo_GPIO_Port GPIOC
+#define S3_Pin GPIO_PIN_5
+#define S3_GPIO_Port GPIOC
+#define S4_Pin GPIO_PIN_6
+#define S4_GPIO_Port GPIOC
+#define CLP_Pin GPIO_PIN_8
+#define CLP_GPIO_Port GPIOC
+#define NEAR_Pin GPIO_PIN_9
+#define NEAR_GPIO_Port GPIOC
+#define S2_Pin GPIO_PIN_12
+#define S2_GPIO_Port GPIOA
+#define Trig_Pin GPIO_PIN_15
+#define Trig_GPIO_Port GPIOA
+#define Buzzer_Pin GPIO_PIN_2
+#define Buzzer_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
