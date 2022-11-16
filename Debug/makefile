@@ -38,34 +38,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := Seguidor_V1
+BUILD_ARTIFACT_NAME := Seguidor_V2
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-Seguidor_V1.elf \
+Seguidor_V2.elf \
 
 MAP_FILES += \
-Seguidor_V1.map \
+Seguidor_V2.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-Seguidor_V1.list \
+Seguidor_V2.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: Seguidor_V1.elf secondary-outputs
+main-build: Seguidor_V2.elf secondary-outputs
 
 # Tool invocations
-Seguidor_V1.elf Seguidor_V1.map: $(OBJS) $(USER_OBJS) C:\Users\djalm\STM32CubeIDE\workspace_1.10.1\Seguidor_V1\STM32G474RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Seguidor_V1.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\djalm\STM32CubeIDE\workspace_1.10.1\Seguidor_V1\STM32G474RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Seguidor_V1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Seguidor_V2.elf Seguidor_V2.map: $(OBJS) $(USER_OBJS) C:\Users\djalm\STM32CubeIDE\workspace_1.10.1\Seguidor_V2\STM32G474RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Seguidor_V2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\djalm\STM32CubeIDE\workspace_1.10.1\Seguidor_V2\STM32G474RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Seguidor_V2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -74,14 +74,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-Seguidor_V1.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "Seguidor_V1.list"
+Seguidor_V2.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "Seguidor_V2.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) Seguidor_V1.elf Seguidor_V1.list Seguidor_V1.map default.size.stdout
+	-$(RM) Seguidor_V2.elf Seguidor_V2.list Seguidor_V2.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

@@ -57,24 +57,34 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define BTN_Pin GPIO_PIN_13
-#define BTN_GPIO_Port GPIOC
-#define Echo_Pin GPIO_PIN_0
-#define Echo_GPIO_Port GPIOC
+#define ECHO_Pin GPIO_PIN_0
+#define ECHO_GPIO_Port GPIOC
 #define S3_Pin GPIO_PIN_5
 #define S3_GPIO_Port GPIOC
 #define S4_Pin GPIO_PIN_6
 #define S4_GPIO_Port GPIOC
+#define IN3_Pin GPIO_PIN_7
+#define IN3_GPIO_Port GPIOC
 #define CLP_Pin GPIO_PIN_8
 #define CLP_GPIO_Port GPIOC
 #define NEAR_Pin GPIO_PIN_9
 #define NEAR_GPIO_Port GPIOC
+#define IN1_Pin GPIO_PIN_8
+#define IN1_GPIO_Port GPIOA
+#define IN2_Pin GPIO_PIN_9
+#define IN2_GPIO_Port GPIOA
 #define S2_Pin GPIO_PIN_12
 #define S2_GPIO_Port GPIOA
-#define Trig_Pin GPIO_PIN_15
-#define Trig_GPIO_Port GPIOA
+#define TRIG_Pin GPIO_PIN_15
+#define TRIG_GPIO_Port GPIOA
 #define Buzzer_Pin GPIO_PIN_2
 #define Buzzer_GPIO_Port GPIOD
+#define ENA_Pin GPIO_PIN_4
+#define ENA_GPIO_Port GPIOB
+#define ENB_Pin GPIO_PIN_5
+#define ENB_GPIO_Port GPIOB
+#define IN4_Pin GPIO_PIN_6
+#define IN4_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

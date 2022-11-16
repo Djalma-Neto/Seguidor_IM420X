@@ -46,9 +46,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-char bS2 = 0;
-char bS3 = 0;
-char bS4 = 0;
 
 /* USER CODE END PV */
 
@@ -61,6 +58,14 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+int _write(int file, char *ptr, int len){
+  if(HAL_UART_Transmit_IT(&hlpuart1,(uint8_t *)ptr, len) != HAL_OK)
+  {
+	  Error_Handler();
+  }
+  return len;
+}
 
 /* USER CODE END 0 */
 
@@ -92,18 +97,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_LPUART1_UART_Init();
-  MX_TIM2_Init();
   MX_TIM1_Init();
+  MX_TIM2_Init();
+  MX_LPUART1_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
-int _write(int file, char *ptr, int len){
-  if(HAL_UART_Transmit_IT(&hlpuart1,(uint8_t *)ptr, len) != HAL_OK)
-  {
-	  Error_Handler();
-  }
-  return len;
-}
 
   /* USER CODE END 2 */
 
