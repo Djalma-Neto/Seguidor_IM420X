@@ -50,28 +50,24 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
-//seguidor
-uint8_t S2;
-uint8_t S3;
-uint8_t S4;
-uint8_t NEAR;
-uint8_t CLP;
-
 //ultrassônico
-uint32_t valor1 = 0;
-uint32_t valor2 = 0;
-uint32_t diferenca = 0;
-uint8_t Is_First = 1;
-uint8_t distancia = 0;
+uint32_t uiValor1 = 0;
+uint32_t uiValor2 = 0;
+uint32_t uiDiferenca = 0;
+uint8_t uiIs_First = 1;
+uint8_t uiDistancia = 0;
 
 //motores
-uint32_t IN1;
-uint32_t IN2;
-uint32_t IN3;
-uint32_t IN4;
-uint32_t velocidade;
+uint32_t uiIN1;
+uint32_t uiIN2;
+uint32_t uiIN3;
+uint32_t uiIN4;
+uint32_t uiVelocidade;
 
-char mostrar[100];
+uint32_t uiStart = 0;
+uint32_t uiBloqueado = 0;
+
+char cMostrar[100];
 
 /* USER CODE END Variables */
 /* Definitions for triger */
@@ -229,56 +225,63 @@ void StartSeguidor(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    S2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
-    S3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
-    S4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
-    NEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
-    CLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
+    uint8_t S2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
+    uint8_t S3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
+    uint8_t S4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
+    uint8_t NEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
+    uint8_t CLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
 
     osSemaphoreAcquire(SemaphoreHandle, 200);
 
-
-    if(!CLP){
+    if(CLP){
     	IN1 = 0;
 		IN2 = 0;
 
 		IN3 = 0;
 		IN4 = 0;
-    }else if(S2 && !S3 && S4){
+		start = start?0:1;
+    }else if(S2 && !S3 && S4 && start){
     	IN1 = 1;
     	IN2 = 0;
 
     	IN3 = 0;
     	IN4 = 1;
-    }else if(S2 && S3 && !S4){
+    }else if(S2 && S3 && !S4 && start){
     	IN1 = 1;
 		IN2 = 0;
 
 		IN3 = 0;
 		IN4 = 0;
-    }else if(!S2 && S3 && S4){
+    }else if(!S2 && S3 && S4 && start){
     	IN1 = 0;
 		IN2 = 0;
 
 		IN3 = 0;
 		IN4 = 1;
-    }else if(!S2 && !S3 && !S4){
-    	IN1 = 0;
+    }else if(S2 && S3 && S4 && start){
+    	//IN1 = 0;
+		//IN2 = 0;
+
+		//IN3 = 0;
+		//IN4 = 0;
+
+		IN1 = 1;
 		IN2 = 0;
 
 		IN3 = 0;
-		IN4 = 0;
+		IN4 = 1;
 
-		osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
     	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
     	osDelay(500);
+    } else if(!S2 && !S3 && !S4 && start){
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
-		osDelay(500);
-		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
+    	osDelay(500);
+    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
+    	osDelay(500);
     }
-    velocidade = 10;
+    velocidade = 80;
 
     osSemaphoreRelease(SemaphoreHandle);
     osDelay(200);
@@ -309,11 +312,11 @@ void StartMotores(void *argument)
 
 	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, IN3);
 	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, IN4);
-	  //htim3.Instance->CCR1 = velocidade;
-	  //htim3.Instance->CCR2 = velocidade;
+	  htim3.Instance->CCR1 = velocidade;
+	  htim3.Instance->CCR2 = velocidade+30;
 
-	  htim3.Instance->CCR1 = 10;
-	  htim3.Instance->CCR2 = 255;
+	  //htim3.Instance->CCR1 = 85;
+	  //htim3.Instance->CCR2 = 85;
 	  osSemaphoreRelease(SemaphoreHandle);
 	  osDelay(200);
   }

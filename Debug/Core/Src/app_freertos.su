@@ -1,6 +1,6 @@
-../Core/Src/app_freertos.c:128:6:MX_FREERTOS_Init	8	static
-../Core/Src/app_freertos.c:183:6:StartTriger	16	static
-../Core/Src/app_freertos.c:205:6:StartComunicacao	24	static
-../Core/Src/app_freertos.c:226:6:StartSeguidor	16	static
-../Core/Src/app_freertos.c:296:6:StartMotores	16	static
-../Core/Src/app_freertos.c:326:6:HAL_TIM_IC_CaptureCallback	16	static
+../Core/Src/app_freertos.c:130:6:MX_FREERTOS_Init	8	static
+../Core/Src/app_freertos.c:185:6:StartTriger	16	static
+../Core/Src/app_freertos.c:207:6:StartComunicacao	24	static
+../Core/Src/app_freertos.c:228:6:StartSeguidor	16	static
+../Core/Src/app_freertos.c:309:6:StartMotores	16	static
+../Core/Src/app_freertos.c:339:6:HAL_TIM_IC_CaptureCallback	16	static
