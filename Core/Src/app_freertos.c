@@ -51,18 +51,27 @@
 /* USER CODE BEGIN Variables */
 
 //ultrassônico
-uint32_t uiValor1 = 0;
-uint32_t uiValor2 = 0;
-uint32_t uiDiferenca = 0;
-uint8_t uiIs_First = 1;
-uint8_t uiDistancia = 0;
+uint8_t uiValor1;
+uint8_t uiValor2;
+uint8_t uiDiferenca;
+uint32_t uiIs_First = 1;
+uint8_t uiDistancia;
 
 //motores
 uint32_t uiIN1;
 uint32_t uiIN2;
 uint32_t uiIN3;
 uint32_t uiIN4;
-uint32_t uiVelocidade;
+uint8_t uiVelocidadeRef;
+
+//odometria
+// encoder_1
+uint8_t uiTime1;
+uint32_t uiIsFistPulse1 = 0;
+
+// encoder_2
+uint8_t uiTime2;
+uint32_t uiIsFistPulse2 = 0;
 
 uint32_t uiStart = 0;
 uint32_t uiBloqueado = 0;
@@ -70,38 +79,50 @@ uint32_t uiBloqueado = 0;
 char cMostrar[100];
 
 /* USER CODE END Variables */
-/* Definitions for triger */
-osThreadId_t trigerHandle;
-const osThreadAttr_t triger_attributes = {
-  .name = "triger",
-  .priority = (osPriority_t) osPriorityNormal,
+/* Definitions for Utrassom */
+osThreadId_t UtrassomHandle;
+const osThreadAttr_t Utrassom_attributes = {
+  .name = "Utrassom",
+  .priority = (osPriority_t) osPriorityNormal2,
   .stack_size = 128 * 4
 };
-/* Definitions for comunicacao */
-osThreadId_t comunicacaoHandle;
-const osThreadAttr_t comunicacao_attributes = {
-  .name = "comunicacao",
+/* Definitions for Comunica */
+osThreadId_t ComunicaHandle;
+const osThreadAttr_t Comunica_attributes = {
+  .name = "Comunica",
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
-/* Definitions for seguidor */
-osThreadId_t seguidorHandle;
-const osThreadAttr_t seguidor_attributes = {
-  .name = "seguidor",
-  .priority = (osPriority_t) osPriorityLow7,
+/* Definitions for Seguidor */
+osThreadId_t SeguidorHandle;
+const osThreadAttr_t Seguidor_attributes = {
+  .name = "Seguidor",
+  .priority = (osPriority_t) osPriorityBelowNormal1,
   .stack_size = 128 * 4
 };
-/* Definitions for motores */
-osThreadId_t motoresHandle;
-const osThreadAttr_t motores_attributes = {
-  .name = "motores",
-  .priority = (osPriority_t) osPriorityLow6,
+/* Definitions for Motores */
+osThreadId_t MotoresHandle;
+const osThreadAttr_t Motores_attributes = {
+  .name = "Motores",
+  .priority = (osPriority_t) osPriorityBelowNormal,
   .stack_size = 128 * 4
 };
-/* Definitions for Semaphore */
-osSemaphoreId_t SemaphoreHandle;
-const osSemaphoreAttr_t Semaphore_attributes = {
-  .name = "Semaphore"
+/* Definitions for Odometria */
+osThreadId_t OdometriaHandle;
+const osThreadAttr_t Odometria_attributes = {
+  .name = "Odometria",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+/* Definitions for SemaphoreMovimenta */
+osSemaphoreId_t SemaphoreMovimentaHandle;
+const osSemaphoreAttr_t SemaphoreMovimenta_attributes = {
+  .name = "SemaphoreMovimenta"
+};
+/* Definitions for SemaphoreComunica */
+osSemaphoreId_t SemaphoreComunicaHandle;
+const osSemaphoreAttr_t SemaphoreComunica_attributes = {
+  .name = "SemaphoreComunica"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,10 +130,11 @@ const osSemaphoreAttr_t Semaphore_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartTriger(void *argument);
-void StartComunicacao(void *argument);
-void StartSeguidor(void *argument);
-void StartMotores(void *argument);
+void FunctionUltrassom(void *argument);
+void FunctionComunica(void *argument);
+void FunctionSeguidor(void *argument);
+void FunctionAtivarMotores(void *argument);
+void FunctionOdometria(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -131,8 +153,11 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* creation of Semaphore */
-  SemaphoreHandle = osSemaphoreNew(1, 1, &Semaphore_attributes);
+  /* creation of SemaphoreMovimenta */
+  SemaphoreMovimentaHandle = osSemaphoreNew(1, 1, &SemaphoreMovimenta_attributes);
+
+  /* creation of SemaphoreComunica */
+  SemaphoreComunicaHandle = osSemaphoreNew(1, 1, &SemaphoreComunica_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -147,17 +172,20 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of triger */
-  trigerHandle = osThreadNew(StartTriger, NULL, &triger_attributes);
+  /* creation of Utrassom */
+  UtrassomHandle = osThreadNew(FunctionUltrassom, NULL, &Utrassom_attributes);
 
-  /* creation of comunicacao */
-  comunicacaoHandle = osThreadNew(StartComunicacao, NULL, &comunicacao_attributes);
+  /* creation of Comunica */
+  ComunicaHandle = osThreadNew(FunctionComunica, NULL, &Comunica_attributes);
 
-  /* creation of seguidor */
-  seguidorHandle = osThreadNew(StartSeguidor, NULL, &seguidor_attributes);
+  /* creation of Seguidor */
+  SeguidorHandle = osThreadNew(FunctionSeguidor, NULL, &Seguidor_attributes);
 
-  /* creation of motores */
-  motoresHandle = osThreadNew(StartMotores, NULL, &motores_attributes);
+  /* creation of Motores */
+  MotoresHandle = osThreadNew(FunctionAtivarMotores, NULL, &Motores_attributes);
+
+  /* creation of Odometria */
+  OdometriaHandle = osThreadNew(FunctionOdometria, NULL, &Odometria_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -169,158 +197,177 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartTriger */
+/* USER CODE BEGIN Header_FunctionUltrassom */
 /**
-  * @brief  Function implementing the triger thread.
+  * @brief  Function implementing the Utrassom thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartTriger */
-void StartTriger(void *argument)
+/* USER CODE END Header_FunctionUltrassom */
+void FunctionUltrassom(void *argument)
 {
-  /* USER CODE BEGIN StartTriger */
-	HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
+  /* USER CODE BEGIN FunctionUltrassom */
+  HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   /* Infinite loop */
   for(;;)
   {
-	  __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
 	  htim2.Instance->CCR1 = 5;
 	  osDelay(10);
   }
-  /* USER CODE END StartTriger */
+  /* USER CODE END FunctionUltrassom */
 }
 
-/* USER CODE BEGIN Header_StartComunicacao */
+/* USER CODE BEGIN Header_FunctionComunica */
 /**
-* @brief Function implementing the comunicacao thread.
+* @brief Function implementing the Comunica thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartComunicacao */
-void StartComunicacao(void *argument)
+/* USER CODE END Header_FunctionComunica */
+void FunctionComunica(void *argument)
 {
-  /* USER CODE BEGIN StartComunicacao */
+  /* USER CODE BEGIN FunctionComunica */
   /* Infinite loop */
   for(;;)
   {
-	  //sprintf(mostrar,"D: %d, V1: %d, V2: %d, DIF: %d \r \n ",(int)distancia,(int)valor1,(int)valor2,(int)diferenca);
-	  sprintf(mostrar,"S2: %d, S3: %d, S4: %d \r \n ",(int)S2,(int)S3,(int)S4);
-	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)mostrar, sizeof(mostrar), 100);
+    //sprintf(mostrar,"D: %d, V1: %d, V2: %d, DIF: %d \r \n ",(int)distancia,(int)valor1,(int)valor2,(int)diferenca);
+	  sprintf(cMostrar,"S2: %d, S3: %d, S4: %d \r \n ",(int)uiIN1,(int)uiIN2,(int)uiIN3);
+	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 	  osDelay(100);
   }
-  /* USER CODE END StartComunicacao */
+  /* USER CODE END FunctionComunica */
 }
 
-/* USER CODE BEGIN Header_StartSeguidor */
+/* USER CODE BEGIN Header_FunctionSeguidor */
 /**
-* @brief Function implementing the seguidor thread.
+* @brief Function implementing the Seguidor thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartSeguidor */
-void StartSeguidor(void *argument)
+/* USER CODE END Header_FunctionSeguidor */
+void FunctionSeguidor(void *argument)
 {
-  /* USER CODE BEGIN StartSeguidor */
+  /* USER CODE BEGIN FunctionSeguidor */
   /* Infinite loop */
   for(;;)
   {
-    uint8_t S2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
-    uint8_t S3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
-    uint8_t S4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
-    uint8_t NEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
-    uint8_t CLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
+    uint8_t uiS2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
+    uint8_t uiS3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
+    uint8_t uiS4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
+    uint8_t uiNEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
+    uint8_t uiCLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
 
-    osSemaphoreAcquire(SemaphoreHandle, 200);
+    osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
-    if(CLP){
-    	IN1 = 0;
-		IN2 = 0;
+    if(uiCLP){
+    	uiIN1 = 0;
+      uiIN2 = 0;
 
-		IN3 = 0;
-		IN4 = 0;
-		start = start?0:1;
-    }else if(S2 && !S3 && S4 && start){
-    	IN1 = 1;
-    	IN2 = 0;
+      uiIN3 = 0;
+      uiIN4 = 0;
+      uiStart = uiStart?0:1;
+    }else if(uiS2 && !uiS3 && uiS4 && uiStart){
+    	uiIN1 = 1;
+    	uiIN2 = 0;
 
-    	IN3 = 0;
-    	IN4 = 1;
-    }else if(S2 && S3 && !S4 && start){
-    	IN1 = 1;
-		IN2 = 0;
+    	uiIN3 = 0;
+    	uiIN4 = 1;
+    }else if(uiS2 && uiS3 && !uiS4 && uiStart){
+    	uiIN1 = 1;
+      uiIN2 = 0;
 
-		IN3 = 0;
-		IN4 = 0;
-    }else if(!S2 && S3 && S4 && start){
-    	IN1 = 0;
-		IN2 = 0;
+      uiIN3 = 0;
+      uiIN4 = 0;
+    }else if(!uiS2 && uiS3 && uiS4 && uiStart){
+    	uiIN1 = 0;
+      uiIN2 = 0;
 
-		IN3 = 0;
-		IN4 = 1;
-    }else if(S2 && S3 && S4 && start){
-    	//IN1 = 0;
-		//IN2 = 0;
+      uiIN3 = 0;
+      uiIN4 = 1;
+    }else if(uiS2 && uiS3 && uiS4 && uiStart){
+    	//uiIN1 = 0;
+      //IN2 = 0;
 
-		//IN3 = 0;
-		//IN4 = 0;
+      //IN3 = 0;
+      //IN4 = 0;
 
-		IN1 = 1;
-		IN2 = 0;
+      uiIN1 = 1;
+      uiIN2 = 0;
 
-		IN3 = 0;
-		IN4 = 1;
+      uiIN3 = 0;
+      uiIN4 = 1;
 
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
     	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
     	osDelay(500);
-    } else if(!S2 && !S3 && !S4 && start){
+    } else if(!uiS2 && !uiS3 && !uiS4 && uiStart){
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
     	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
     	osDelay(500);
     }
-    velocidade = 80;
+    uiVelocidadeRef = 80;
 
-    osSemaphoreRelease(SemaphoreHandle);
+    osSemaphoreRelease(SemaphoreMovimentaHandle);
     osDelay(200);
   }
-  /* USER CODE END StartSeguidor */
+  /* USER CODE END FunctionSeguidor */
 }
 
-/* USER CODE BEGIN Header_StartMotores */
+/* USER CODE BEGIN Header_FunctionAtivarMotores */
 /**
-* @brief Function implementing the motores thread.
+* @brief Function implementing the Motores thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartMotores */
-void StartMotores(void *argument)
+/* USER CODE END Header_FunctionAtivarMotores */
+void FunctionAtivarMotores(void *argument)
 {
-  /* USER CODE BEGIN StartMotores */
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  /* USER CODE BEGIN FunctionAtivarMotores */
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-
   /* Infinite loop */
   for(;;)
   {
-	  osSemaphoreAcquire(SemaphoreHandle, 200);
+    osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
-	  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, IN1);
-	  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, IN2);
+	  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, uiIN1);
+	  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, uiIN2);
 
-	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, IN3);
-	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, IN4);
-	  htim3.Instance->CCR1 = velocidade;
-	  htim3.Instance->CCR2 = velocidade+30;
+	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, uiIN3);
+	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, uiIN4);
+	  htim3.Instance->CCR1 = uiVelocidadeRef;
+	  htim3.Instance->CCR2 = uiVelocidadeRef+30;
 
 	  //htim3.Instance->CCR1 = 85;
 	  //htim3.Instance->CCR2 = 85;
-	  osSemaphoreRelease(SemaphoreHandle);
+	  osSemaphoreRelease(SemaphoreMovimentaHandle);
 	  osDelay(200);
   }
-  /* USER CODE END StartMotores */
+  /* USER CODE END FunctionAtivarMotores */
+}
+
+/* USER CODE BEGIN Header_FunctionOdometria */
+/**
+* @brief Function implementing the Odometria thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_FunctionOdometria */
+void FunctionOdometria(void *argument)
+{
+  /* USER CODE BEGIN FunctionOdometria */
+	HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_2);
+	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END FunctionOdometria */
 }
 
 /* Private application code --------------------------------------------------*/
@@ -328,23 +375,32 @@ void StartMotores(void *argument)
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim1) {
-		if (Is_First) {
-			valor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			Is_First = 0;
+		if (uiIs_First) {
+			uiValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			uiIs_First = 0;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,TIM_INPUTCHANNELPOLARITY_FALLING);
-		} else if(!Is_First){
-			valor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		} else if(!uiIs_First){
+			uiValor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COUNTER(htim, 0);
 
-			diferenca = valor2>valor1?valor2-valor1:valor1-valor2;
+			uiDiferenca = uiValor2>uiValor1?uiValor2-uiValor1:uiValor1-uiValor2;
 
-			distancia = diferenca * .034/2;
+			uiDistancia = uiDiferenca * .034/2;
 
-			Is_First = 1;
+			uiIs_First = 1;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,TIM_INPUTCHANNELPOLARITY_RISING);
 			__HAL_TIM_DISABLE_IT(htim, TIM_IT_CC1);
 		}
-	}
+	} else if(htim == &htim5){
+    if(uiIsFistPulse1){
+      __HAL_TIM_SET_COUNTER(htim, 0);
+      uiIsFistPulse1 = 0;
+    }else{
+      uiTime1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+      uiIsFistPulse1 = 1;
+    }
+  }
+
 }
 
 /* USER CODE END Application */

@@ -73,10 +73,14 @@ void Error_Handler(void);
 #define IN1_GPIO_Port GPIOA
 #define IN2_Pin GPIO_PIN_9
 #define IN2_GPIO_Port GPIOA
+#define Encoder_E_Pin GPIO_PIN_11
+#define Encoder_E_GPIO_Port GPIOA
 #define S2_Pin GPIO_PIN_12
 #define S2_GPIO_Port GPIOA
 #define TRIG_Pin GPIO_PIN_15
 #define TRIG_GPIO_Port GPIOA
+#define Encoder_D_Pin GPIO_PIN_12
+#define Encoder_D_GPIO_Port GPIOC
 #define Buzzer_Pin GPIO_PIN_2
 #define Buzzer_GPIO_Port GPIOD
 #define ENA_Pin GPIO_PIN_4
