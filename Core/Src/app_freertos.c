@@ -66,12 +66,10 @@ uint8_t uiVelocidadeRef;
 
 //odometria
 // encoder_1
-uint8_t uiTime1;
-uint32_t uiIsFistPulse1 = 0;
+unsigned long liOldPulsePerSecond1, liPulsePerSecond1, timeEncoder1;
 
 // encoder_2
-uint8_t uiTime2;
-uint32_t uiIsFistPulse2 = 0;
+unsigned long liOldPulsePerSecond2,liPulsePerSecond2, timeEncoder2;
 
 uint32_t uiStart = 0;
 uint32_t uiBloqueado = 0;
@@ -84,7 +82,7 @@ osThreadId_t UtrassomHandle;
 const osThreadAttr_t Utrassom_attributes = {
   .name = "Utrassom",
   .priority = (osPriority_t) osPriorityNormal2,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for Comunica */
 osThreadId_t ComunicaHandle;
@@ -207,15 +205,15 @@ void MX_FREERTOS_Init(void) {
 void FunctionUltrassom(void *argument)
 {
   /* USER CODE BEGIN FunctionUltrassom */
-  HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   /* Infinite loop */
-  for(;;)
-  {
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
-	  htim2.Instance->CCR1 = 5;
-	  osDelay(10);
-  }
+	for(;;)
+	{
+		//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+		htim2.Instance->CCR1 = 5;
+		osDelay(200);
+	}
   /* USER CODE END FunctionUltrassom */
 }
 
@@ -232,9 +230,13 @@ void FunctionComunica(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    //sprintf(mostrar,"D: %d, V1: %d, V2: %d, DIF: %d \r \n ",(int)distancia,(int)valor1,(int)valor2,(int)diferenca);
-	  sprintf(cMostrar,"S2: %d, S3: %d, S4: %d \r \n ",(int)uiIN1,(int)uiIN2,(int)uiIN3);
+	  //sprintf(mostrar,"D: %d, V1: %d, V2: %d, DIF: %d \r \n ",(int)distancia,(int)valor1,(int)valor2,(int)diferenca);
+	  //sprintf(cMostrar,"S2: %d, S3: %d, S4: %d \r \n ",(int)uiS2,(int)uiS3,(int)uiS4);
+	  //sprintf(cMostrar,"Time: %d, value: %d \r \n ",uiTime1,uiFistPulseValue1);
+	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
+	  sprintf(cMostrar, "motor_E/s: %ld, motor_D/s: %ld \r \n",liPulsePerSecond1,liPulsePerSecond2);
 	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
+	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
   }
   /* USER CODE END FunctionComunica */
@@ -256,18 +258,24 @@ void FunctionSeguidor(void *argument)
     uint8_t uiS2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
     uint8_t uiS3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
     uint8_t uiS4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
-    uint8_t uiNEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
-    uint8_t uiCLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
+
+    //uint8_t uiNEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
+    //uint8_t uiCLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
+    uint8_t uiBTN = HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin);
 
     osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
-    if(uiCLP){
+    if(uiBTN){
     	uiIN1 = 0;
-      uiIN2 = 0;
+    	uiIN2 = 0;
 
-      uiIN3 = 0;
-      uiIN4 = 0;
-      uiStart = uiStart?0:1;
+    	uiIN3 = 0;
+    	uiIN4 = 0;
+    	uiStart = uiStart?0:1;
+    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
+		osDelay(500);
+		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
+		osDelay(500);
     }else if(uiS2 && !uiS3 && uiS4 && uiStart){
     	uiIN1 = 1;
     	uiIN2 = 0;
@@ -276,38 +284,33 @@ void FunctionSeguidor(void *argument)
     	uiIN4 = 1;
     }else if(uiS2 && uiS3 && !uiS4 && uiStart){
     	uiIN1 = 1;
-      uiIN2 = 0;
+    	uiIN2 = 0;
 
-      uiIN3 = 0;
-      uiIN4 = 0;
+    	uiIN3 = 0;
+    	uiIN4 = 0;
     }else if(!uiS2 && uiS3 && uiS4 && uiStart){
     	uiIN1 = 0;
-      uiIN2 = 0;
+    	uiIN2 = 0;
 
-      uiIN3 = 0;
-      uiIN4 = 1;
-    }else if(uiS2 && uiS3 && uiS4 && uiStart){
-    	//uiIN1 = 0;
-      //IN2 = 0;
+    	uiIN3 = 0;
+    	uiIN4 = 1;
+    }else if(((uiS2 && uiS3 && uiS4) || (uiS2 && !uiS3 && uiS4)) && uiStart){
+    	uiIN1 = 0;
+    	uiIN2 = 0;
 
-      //IN3 = 0;
-      //IN4 = 0;
+    	uiIN3 = 0;
+    	uiIN4 = 0;
 
-      uiIN1 = 1;
-      uiIN2 = 0;
-
-      uiIN3 = 0;
-      uiIN4 = 1;
-
-    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
-    	osDelay(500);
-    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
-    	osDelay(500);
     } else if(!uiS2 && !uiS3 && !uiS4 && uiStart){
+    	uiIN1 = 0;
+		uiIN2 = 0;
+
+		uiIN3 = 0;
+		uiIN4 = 0;
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
-    	osDelay(500);
+    	osDelay(100);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
-    	osDelay(500);
+    	osDelay(100);
     }
     uiVelocidadeRef = 80;
 
@@ -360,12 +363,13 @@ void FunctionAtivarMotores(void *argument)
 void FunctionOdometria(void *argument)
 {
   /* USER CODE BEGIN FunctionOdometria */
-	HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_2);
 	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
+	HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_2);
+	HAL_TIM_Base_Start_IT(&htim6);
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  osDelay(100);
   }
   /* USER CODE END FunctionOdometria */
 }
@@ -374,33 +378,20 @@ void FunctionOdometria(void *argument)
 /* USER CODE BEGIN Application */
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if (htim == &htim1) {
-		if (uiIs_First) {
-			uiValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			uiIs_First = 0;
-			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,TIM_INPUTCHANNELPOLARITY_FALLING);
-		} else if(!uiIs_First){
-			uiValor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			__HAL_TIM_SET_COUNTER(htim, 0);
+	if(htim == &htim4){//encoder Esquerdo
+		liOldPulsePerSecond1++;
+	}else if(htim == &htim5){//encoder Direito
+		liOldPulsePerSecond2++;
+	}
+}
 
-			uiDiferenca = uiValor2>uiValor1?uiValor2-uiValor1:uiValor1-uiValor2;
-
-			uiDistancia = uiDiferenca * .034/2;
-
-			uiIs_First = 1;
-			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1,TIM_INPUTCHANNELPOLARITY_RISING);
-			__HAL_TIM_DISABLE_IT(htim, TIM_IT_CC1);
-		}
-	} else if(htim == &htim5){
-    if(uiIsFistPulse1){
-      __HAL_TIM_SET_COUNTER(htim, 0);
-      uiIsFistPulse1 = 0;
-    }else{
-      uiTime1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-      uiIsFistPulse1 = 1;
-    }
-  }
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
+	if(htim == &htim6){
+		liPulsePerSecond1 = liOldPulsePerSecond1;
+		liPulsePerSecond2 = liOldPulsePerSecond2;
+		liOldPulsePerSecond1 = 0;
+		liOldPulsePerSecond2 = 0;
+	}
 }
 
 /* USER CODE END Application */
