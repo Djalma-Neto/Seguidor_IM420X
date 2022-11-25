@@ -51,16 +51,15 @@
 /* USER CODE BEGIN Variables */
 
 //ultrassônico
-long ulValor1;
-long ulValor2;
-float iDiferenca;
+long lValor1;
+long lValor2;
+float fDiferenca;
 uint8_t uiIs_First = 1;
-float ulDistancia;
-#define Fator .00017
+float fDistancia;
 
 //motores
-long uiVelocidadeRefD = 0;
-long uiVelocidadeRefE = 0;
+long lVelocidadeRefD = 0;
+long lVelocidadeRefE = 0;
 unsigned int uiVelocidade = 255;
 float fCalibragemE=0.0;
 float fCalibragemD=0.2;
@@ -71,12 +70,12 @@ float fReducao=0.4;
 uint8_t uiFuros = 20;
 // encoder_1
 unsigned long ulPulsePerSecondE;
-float ulRpmE;
+float fRpmE;
 uint8_t uiFistWind1 = 1;
 
 // encoder_2
 unsigned long ulPulsePerSecondD;
-float ulRpmD;
+float fRpmD;
 uint8_t uiFistWind2 = 1;
 
 uint32_t uiStart = 0;
@@ -84,7 +83,7 @@ uint32_t uiBloqueado = 0;
 
 char cMostrar[100];
 
-char rxData[100];
+char cData[100];
 
 /* USER CODE END Variables */
 /* Definitions for Utrassom */
@@ -138,8 +137,8 @@ const osSemaphoreAttr_t SemaphoreComunica_attributes = {
 
 int PID(int valocidade, int valor){
 	int pwm=0;
-	//uiVelocidadeRefE => SETPOINT
-	//erro => uiVelocidadeRefE-ulRpmE
+	//lVelocidadeRefE => SETPOINT
+	//erro => lVelocidadeRefE-fRpmE
 	//Kp = 53/720
 	//pwm = erro*Kp
 	pwm = (valocidade-valor)*(0.01/valocidade);
@@ -249,25 +248,22 @@ void FunctionUltrassom(void *argument)
 void FunctionComunica(void *argument)
 {
   /* USER CODE BEGIN FunctionComunica */
-	//HAL_UART_Receive_IT(&huart1, &rxData, 100);
+	HAL_UART_Receive_IT(&huart1, (uint8_t *)cData, 100);
+	HAL_GPIO_WritePin(HC05_EN_GPIO_Port, HC05_EN_Pin, 1);
   /* Infinite loop */
   for(;;)
   {
-	  HAL_GPIO_WritePin(HC05_EN_GPIO_Port, HC05_EN_Pin, 1);
-	  //sprintf(mostrar,"D: %d, V1: %d, V2: %d, DIF: %d \r \n ",(int)distancia,(int)valor1,(int)valor2,(int)diferenca);
-	  //sprintf(cMostrar,"S2: %d, S3: %d, S4: %d \r \n ",(int)uiS2,(int)uiS3,(int)uiS4);
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
-	  int valor1 = (int)ulDistancia;
-	  int valor2 = (ulDistancia-(int)ulDistancia)*100;
 
+	  int valor1 = (int)fDistancia;
+	  int valor2 = (fDistancia-(int)fDistancia)*100;
 	  sprintf(cMostrar,"Dis: %d.%02d \r \n ",valor1,valor2);
 
-	  //sprintf(cMostrar, "motor_E/RPM: %d, motor_D/RPM: %d \r \n",(int)ulRpmE,(int)ulRpmD);
+	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 0);
+	  osDelay(500);
+	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 1);
 
-	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
-
-	  //HAL_UART_Transmit(&hlpuart1, (uint8_t*)rxData, sizeof(rxData), 100);
-	  //HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
+	  HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 
 	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(500);
@@ -299,28 +295,28 @@ void FunctionSeguidor(void *argument)
     osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
     if(uiBTN){
-    	uiVelocidadeRefD = 1;
-    	uiVelocidadeRefE = 1;
+    	lVelocidadeRefD = 1;
+    	lVelocidadeRefE = 1;
     	uiStart = uiStart?0:1;
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
     	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
     	osDelay(500);
     }else if(uiS2 && !uiS3 && uiS4 && uiStart){
-    	uiVelocidadeRefD = uiVelocidade;
-    	uiVelocidadeRefE = uiVelocidade;
+    	lVelocidadeRefD = uiVelocidade;
+    	lVelocidadeRefE = uiVelocidade;
     }else if(uiS2 && uiS3 && !uiS4 && uiStart){
-    	uiVelocidadeRefE = uiVelocidade;
-    	uiVelocidadeRefD = uiVelocidade-(uiVelocidade*fReducao);
+    	lVelocidadeRefE = uiVelocidade;
+    	lVelocidadeRefD = uiVelocidade-(uiVelocidade*fReducao);
     }else if(!uiS2 && uiS3 && uiS4 && uiStart){
-    	uiVelocidadeRefE = uiVelocidade-(uiVelocidade*fReducao);
-    	uiVelocidadeRefD = uiVelocidade;
+    	lVelocidadeRefE = uiVelocidade-(uiVelocidade*fReducao);
+    	lVelocidadeRefD = uiVelocidade;
     }else if(((uiS2 && !uiS3 && uiS4)) && uiStart){
-    	uiVelocidadeRefD = 1;
-    	uiVelocidadeRefE = 1;
+    	lVelocidadeRefD = 1;
+    	lVelocidadeRefE = 1;
     } else if(!uiS2 && !uiS3 && !uiS4 && uiStart){
-    	uiVelocidadeRefD = 1;
-		uiVelocidadeRefE = 1;
+    	lVelocidadeRefD = 1;
+		lVelocidadeRefE = 1;
 		uiStart = 0;
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
     	osDelay(100);
@@ -356,17 +352,9 @@ void FunctionAtivarMotores(void *argument)
 	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
 
-	  // htim3.Instance->CCR1 = PID(uiVelocidadeRefE, ulRpmE);
-	  // htim3.Instance->CCR2 = PID(uiVelocidadeRefD, ulRpmD);
+	  htim3.Instance->CCR1 = lVelocidadeRefE+(lVelocidadeRefE*fCalibragemE);
+	  htim3.Instance->CCR2 = lVelocidadeRefD+(lVelocidadeRefD*fCalibragemD);
 
-	  htim3.Instance->CCR1 = uiVelocidadeRefE+(uiVelocidadeRefE*fCalibragemE);
-	  htim3.Instance->CCR2 = uiVelocidadeRefD+(uiVelocidadeRefD*fCalibragemD);
-
-	  //htim3.Instance->CCR1 = 0;
-	  //htim3.Instance->CCR2 = uiVelocidadeRefD+2;
-
-	  //htim3.Instance->CCR1 = 85;
-	  //htim3.Instance->CCR2 = 85;
 	  osSemaphoreRelease(SemaphoreMovimentaHandle);
 	  osDelay(200);
   }
@@ -400,18 +388,17 @@ void FunctionOdometria(void *argument)
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	if(htim == &htim1){//ultrassonico
 		if(uiIs_First){
-			ulValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
+			lValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
 			uiIs_First=0;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_FALLING);
 		}else{
-			ulValor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
+			lValor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
 			uiIs_First=1;
 
-			iDiferenca = (float)((unsigned)ulValor2-(unsigned)ulValor1);
-			iDiferenca = (iDiferenca/2)*0.0001;
-			ulDistancia = (iDiferenca*340)/2>100?ulDistancia:(iDiferenca*340)/2;
+			fDiferenca = (float)((unsigned)lValor2-(unsigned)lValor1);
+			fDiferenca = (fDiferenca/2)*0.0001;
+			fDistancia = (fDiferenca*340)/2>100?fDistancia:(fDiferenca*340)/2;
 
-			//ulDistancia = ((((float)iDiferenca/100000)*340)/2);
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_RISING);
 			__HAL_TIM_DISABLE_IT(htim, TIM_CHANNEL_3);
 		}
@@ -426,8 +413,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
 	if(htim == &htim6){
-		ulRpmE = ulPulsePerSecondE;
-		ulRpmD = ulPulsePerSecondD;
+		fRpmE = ulPulsePerSecondE;
+		fRpmD = ulPulsePerSecondD;
 		//HAL_GPIO_TogglePin(Buzzer_GPIO_Port, Buzzer_Pin);
 
 		ulPulsePerSecondE = 0;
@@ -438,7 +425,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart == &huart1)
   {
-	  HAL_UART_Receive(&huart1, &rxData, 100, 100);
+	  HAL_UART_Receive(&huart1, (uint8_t *)cData, 100, 100);
 	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 0);
 	  osDelay(500);
 	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 1);
