@@ -260,10 +260,7 @@ void FunctionComunica(void *argument)
 	  int valor1 = (int)ulDistancia;
 	  int valor2 = (ulDistancia-(int)ulDistancia)*100;
 
-	  int valor3 = (int)iDiferenca;
-	  int valor4 = (iDiferenca-(int)iDiferenca)*100;
-
-	  sprintf(cMostrar,"Dis: %d.%02d, Dif: %d.%02d \r \n ",valor1,valor2,valor3,valor4);
+	  sprintf(cMostrar,"Dis: %d.%02d \r \n ",valor1,valor2);
 
 	  //sprintf(cMostrar, "motor_E/RPM: %d, motor_D/RPM: %d \r \n",(int)ulRpmE,(int)ulRpmD);
 
@@ -412,7 +409,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 			iDiferenca = (float)((unsigned)ulValor2-(unsigned)ulValor1);
 			iDiferenca = (iDiferenca/2)*0.0001;
-			ulDistancia = (iDiferenca*340)/2;
+			ulDistancia = (iDiferenca*340)/2>100?ulDistancia:(iDiferenca*340)/2;
 
 			//ulDistancia = ((((float)iDiferenca/100000)*340)/2);
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_RISING);
