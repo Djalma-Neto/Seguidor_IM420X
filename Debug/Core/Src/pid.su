@@ -1,0 +1,4 @@
+../Core/Src/pid.c:10:6:PID_init_D	16	static
+../Core/Src/pid.c:18:6:PID_init_E	16	static
+../Core/Src/pid.c:27:7:PID_E	40	static
+../Core/Src/pid.c:54:7:PID_D	40	static
