@@ -56,15 +56,14 @@
 long lValor1;
 long lValor2;
 float fDiferenca;
+uint8_t countCapture = 0;
 uint8_t uiIs_First = 1;
 float fDistancia, fVelocidade;
 
 //motores
-float uiVelocidade = 1; // M/s
-float fReducao = 0.4;
-float RPS_E;
-float RPS_D;
-float fVelocidadeRefD, fVelocidadeRefE;
+float uiVelocidade = 0.030; // M/s
+float fReducao = 0.5;
+float fVelocidadeRefD, fVelocidadeRefE,VE,VD,PIDVAL_D, PIDVAL_E;
 
 //odometria
 #define FUROS 20
@@ -85,10 +84,12 @@ uint8_t uOldValueE,uOldValueD;
 //seguidor
 uint32_t uiStart = 0;
 uint32_t uiBloqueado = 0;
+uint32_t countSeguidor = 0;
 
 //comunica
 char cMostrar[100];
-char cData[100];
+char cData = 'M';
+//extern char cData = 'M';
 uint8_t RX_BUFFER[100] = {0};
 
 /* USER CODE END Variables */
@@ -158,6 +159,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+	HAL_UART_Receive_IT(&huart1, (uint8_t *)&cData, sizeof(cData));
 
   /* USER CODE END Init */
 
@@ -228,7 +230,7 @@ void FunctionUltrassom(void *argument)
 		HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 1);
 		osDelay(10);
 		HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 0);
-		osDelay(200);
+		osDelay(500);
 	}
   /* USER CODE END FunctionUltrassom */
 }
@@ -243,25 +245,29 @@ void FunctionUltrassom(void *argument)
 void FunctionComunica(void *argument)
 {
   /* USER CODE BEGIN FunctionComunica */
-	HAL_UART_Receive_IT(&huart1, RX_BUFFER, 100);
 	HAL_GPIO_WritePin(HC05_EN_GPIO_Port, HC05_EN_Pin, 1);
   /* Infinite loop */
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
 
-	  /*int valor1 = (int)RPS_E;
-	  int valor2 = (RPS_E-(int)RPS_E)*100;
+	  if(uiBloqueado){
+		  int dist1 = (int)fDistancia;
+		  int dist2 = (fDistancia-(int)fDistancia)*100;
 
-	  int valor3 = (int)RPS_D;
-	  int valor4 = (RPS_D-(int)RPS_D)*100;
+		  sprintf(cMostrar,"Blockeado: %d.%02d\r \n ",dist1,dist2);
+	  } else if(!uiStart){
+		  sprintf(cMostrar,"Aguardando Start!! \r \n ");
+	  } else{
+		  int valor1 = (int)VE;
+		  int valor2 = (VE-(int)VE)*100;
 
-	  sprintf(cMostrar,"ME: %d.%02d -- MD: %d.%02d \r \n ",valor1,valor2,valor3,valor4);*/
+		  int valor3 = (int)VD;
+		  int valor4 = (VD-(int)VD)*100;
 
-	  int valor1 = (int)fDistancia;
-	  int valor2 = (fDistancia-(int)fDistancia)*100;
-
-	  sprintf(cMostrar,"Distancia: %d.%02d \r \n ",valor1,valor2);
+		  sprintf(cMostrar,"MotorE: %d.%02d(%d) -- MotorD: %d.%02d(%d) \r \n ",
+				  valor1,valor2,(int)PIDVAL_E,valor3,valor4,(int)PIDVAL_D);
+	  }
 
 	  HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
@@ -288,7 +294,6 @@ void FunctionSeguidor(void *argument)
     uint8_t uiS2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
     uint8_t uiS3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
     uint8_t uiS4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
-    //sprintf(cMostrar,"%d -- %d -- %d\r\n",uiS2,uiS3,uiS4);
 
     //uint8_t uiNEAR = HAL_GPIO_ReadPin(NEAR_GPIO_Port, NEAR_Pin);
     //uint8_t uiCLP = HAL_GPIO_ReadPin(CLP_GPIO_Port, CLP_Pin);
@@ -296,34 +301,50 @@ void FunctionSeguidor(void *argument)
 
     osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
-    if(uiBTN){
-    	fVelocidadeRefD = 0;
-    	fVelocidadeRefE = 0;
-    	uiStart = uiStart?0:1;
-    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
-    	osDelay(500);
-    	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
-    	osDelay(500);
-    }else if(uiS2 && !uiS3 && uiS4 && uiStart){
-    	fVelocidadeRefD = uiVelocidade;
-    	fVelocidadeRefE = uiVelocidade;
-    }else if(uiS2 && uiS3 && !uiS4 && uiStart){
-    	fVelocidadeRefE = uiVelocidade;
-    	fVelocidadeRefD = uiVelocidade-(uiVelocidade*fReducao);
-    }else if(!uiS2 && uiS3 && uiS4 && uiStart){
-    	fVelocidadeRefE = uiVelocidade-(uiVelocidade*fReducao);
-    	fVelocidadeRefD = uiVelocidade;
-    }else if(((uiS2 && !uiS3 && uiS4)) && uiStart){
-    	fVelocidadeRefD = 0;
-    	fVelocidadeRefE = 0;
-    } else if(!uiS2 && !uiS3 && !uiS4 && uiStart){
+    if(uiBloqueado){
     	fVelocidadeRefD = 0;
 		fVelocidadeRefE = 0;
-		uiStart = 0;
+		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
+		osDelay(500);
+		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
+    }else if(uiBTN){
+    	uiStart = uiStart?0:1;
+    	countSeguidor = 0;
+    	fVelocidadeRefD = 0;
+    	fVelocidadeRefE = 0;
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
-    	osDelay(100);
+    	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
-    	osDelay(100);
+    	osDelay(500);
+    }else if(uiStart && countSeguidor < 50){
+    	if(uiS2 && uiS3 && !uiS4){
+    		countSeguidor = 0;
+			fVelocidadeRefE = uiVelocidade;
+			fVelocidadeRefD = 0;
+		}else if(!uiS2 && uiS3 && uiS4){
+			countSeguidor = 0;
+			fVelocidadeRefE = 0;
+			fVelocidadeRefD = uiVelocidade;
+		}else if(uiS2 && !uiS3 && uiS4){
+			countSeguidor = 0;
+			fVelocidadeRefD = uiVelocidade;
+			fVelocidadeRefE = uiVelocidade;
+		}else if(!uiS2 && !uiS3 && !uiS4){
+			countSeguidor = 0;
+			fVelocidadeRefD = 0;
+			fVelocidadeRefE = 0;
+			uiStart = 0;
+			HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
+			osDelay(100);
+			HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
+			osDelay(100);
+		}
+    	if(uiS2 && uiS3 && uiS4){
+    		countSeguidor++;
+		}
+    }else{
+    	fVelocidadeRefD = 0;
+		fVelocidadeRefE = 0;
     }
     osDelay(100);
     osSemaphoreRelease(SemaphoreMovimentaHandle);
@@ -347,51 +368,63 @@ void FunctionAtivarMotores(void *argument)
 	sPID_D pid_D;
 	sPID_E pid_E;
 
-	pid_D.fKpD = 90;
-	pid_D.fKiD = 0.0;
-	pid_D.fKdD = 0.0;
-	pid_D.fTsD = 1;
-	pid_D.fOutminD = 50;
-	pid_D.fOutmaxD = 200;
-
-	pid_E.fKpE = 200;
-	pid_E.fKiE = 0.5;
-	pid_E.fKdE = 0.1;
-	pid_E.fTsE = 1000;
-	pid_E.fOutminE = 50;
-	pid_E.fOutmaxE = 200;
-
-	PID_init_D(&pid_D);
+	pid_E.fKpE = 800;
+	pid_E.fKiE = 2;
+	pid_E.fKdE = 0;
+	pid_E.fTsE = 200000;
+	pid_E.fOutminE = 0;
+	pid_E.fOutmaxE = 100;
 	PID_init_E(&pid_E);
+
+	pid_D.fKpD = 800;
+	pid_D.fKiD = 2;
+	pid_D.fKdD = 0;
+	pid_D.fTsD = 200000;
+	pid_D.fOutminD = 0;
+	pid_D.fOutmaxD = 100;
+	PID_init_D(&pid_D);
 
   /* Infinite loop */
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
+	  if(fVelocidadeRefD && fVelocidadeRefE){
+		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
+		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
-	  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
-	  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
+		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
+		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
+	  }else if(!fVelocidadeRefD && !fVelocidadeRefE){
+		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
+		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
-	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
-	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
+		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
+		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
+	  }/*else if(!fVelocidadeRefD && fVelocidadeRefE){
+		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
+		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
-	  RPS_E = ((float)ulPulsePerSecondE/FUROS);
-	  RPS_D = ((float)ulPulsePerSecondD/FUROS);
+		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
+		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
+	  }else if(fVelocidadeRefD && !fVelocidadeRefE){
+		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
+		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
-	  //float VE = (((ulPulsePerSecondE*2*3.14)/20)*RAIO);
-	  float VD = ((((float)ulPulsePerSecondD*2*3.14)/20)*RAIO);
+		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
+		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
+	  }*/
 
-	  //htim3.Instance->CCR1 = PID_E(RPS_E, fVelocidadeRefE);
-	  //htim3.Instance->CCR2 = PID_D(VD, fVelocidadeRefD);
+	  ulPulsePerSecondE = ulPulsePerSecondE*10;
+	  ulPulsePerSecondD = ulPulsePerSecondD*10;
 
-	  float PID_VAL = PID_D(VD, fVelocidadeRefD);
+	  VE = ((((float)ulPulsePerSecondE*2*3.14)/20)*RAIO);
+	  VD = ((((float)ulPulsePerSecondD*2*3.14)/20)*RAIO);
 
-	  int val1 = (int)VD;
-	  int val2 = (VD-(int)VD)*100;
-	  int val3 = (int)PID_VAL;
-	  int val4 = (PID_VAL-(int)PID_VAL)*100;
+	  PIDVAL_D = PID_D(VD, fVelocidadeRefD);
+	  PIDVAL_E = PID_E(VE, fVelocidadeRefE);
 
-	  //sprintf(cMostrar,"RD: %d.%02d, PID: %d.%02d \r\n",val1,val2,val3,val4);
+	  htim3.Instance->CCR1 = PIDVAL_D;
+	  htim3.Instance->CCR2 = PIDVAL_E;
 
 	  osSemaphoreRelease(SemaphoreMovimentaHandle);
 	  osDelay(100);
@@ -415,12 +448,14 @@ void FunctionOdometria(void *argument)
   /* Infinite loop */
   for(;;)
   {
+	  osSemaphoreAcquire(SemaphoreComunicaHandle, 100);
 	  teta = teta + (((fVelocidadeD-fVelocidadeE)/(COMPRIMENTO+LARGURA))*1);
 
 	  fSD = fSD + ((fVelocidadeD+fVelocidadeE)/2)*cos(teta);
 	  fSE = fSE + ((fVelocidadeD+fVelocidadeE)/2)*sin(teta);
 
 	  fDistancia = sqrt(pow(fSD,2) + pow(fSE,2));
+	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
   }
   /* USER CODE END FunctionOdometria */
@@ -442,6 +477,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			fDiferenca = (float)((unsigned)lValor2-(unsigned)lValor1);
 			fDistancia = ((fDiferenca/2)*0.0001)*340/2 < 100?((fDiferenca/2)*0.0001)*340/2 : fDistancia;
 
+			uiBloqueado = (fDistancia>2 && fDistancia<15) ? 1 : 0;
+
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_RISING);
 			__HAL_TIM_DISABLE_IT(htim, TIM_CHANNEL_3);
 		}
@@ -451,8 +488,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
 	if(htim == &htim6){
 		ulPulsePerSecondE = __HAL_TIM_GET_COUNTER(&htim2);
 		ulPulsePerSecondD = __HAL_TIM_GET_COUNTER(&htim5);
-
-		//sprintf(cMostrar,"RD: %d \r\n",(int)ulPulsePerSecondE);
 
 		fVelocidadeE = ((float)ulPulsePerSecondE/FUROS)*2*3.1415*RAIO;
 		fVelocidadeD = ((float)ulPulsePerSecondD/FUROS)*2*3.1415*RAIO;
@@ -465,10 +500,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart == &huart1)
   {
-	  HAL_UART_Receive(&huart1, (uint8_t *)cData, 100, 100);
-	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 0);
-	  osDelay(500);
-	  HAL_GPIO_WritePin(HC05_STATE_GPIO_Port, HC05_STATE_Pin, 1);
+	  //
   }
 }
 
