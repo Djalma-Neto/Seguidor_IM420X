@@ -51,9 +51,8 @@
 //variáveis utilizadas pelo sensor ultrassônico
 long lValor1;
 long lValor2;
-float fDiferenca;
+float fDiferenca, fDistancia;
 uint8_t uiIsFirst = 1;
-float fDistancia;
 
 //variáveis utilizadas pelos motores
 float fVelocidade = 0.030; // M/s
@@ -66,7 +65,7 @@ float fWAngularD, fWAngularE,fVE,fVD,fPIDVal_D, fPIDVal_E;
 #define COMPRIMENTO 0.12
 #define LARGURA 0.028
 
-float fTeta, fSD, fSE;
+float fTeta, fSD, fSE, fDistanciaO;
 
 // encoder_Esquerdo
 unsigned long ulPulsePerSecondE;
@@ -83,7 +82,7 @@ uint32_t uiCountSeguidor = 0;
 
 //variáveis utilizadas para comunicação
 char cMostrar[100];
-char cData = 'M';
+char cData='M';
 
 /* USER CODE END Variables */
 /* Definitions for Utrassom */
@@ -152,8 +151,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-	HAL_UART_Receive_IT(&huart1, (uint8_t *)&cData, sizeof(cData));
-
+	HAL_UART_Receive_IT(&huart1, (uint8_t *)cData, sizeof(cData));
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -238,12 +236,11 @@ void FunctionUltrassom(void *argument)
 void FunctionComunica(void *argument)
 {
   /* USER CODE BEGIN FunctionComunica */
-	HAL_GPIO_WritePin(HC05_EN_GPIO_Port, HC05_EN_Pin, 1);
   /* Infinite loop */
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
-
+	  HAL_UART_Receive(&huart1, (uint8_t *)&cData, sizeof(cData),100);
 	  if(uiBloqueado){
 		  int dist1 = (int)fDistancia;
 		  int dist2 = (fDistancia-(int)fDistancia)*100;
@@ -252,16 +249,33 @@ void FunctionComunica(void *argument)
 	  } else if(!uiStart){
 		  sprintf(cMostrar,"Aguardando Start!! \r \n ");
 	  } else{
-		  int valor1 = (int)fVE;
-		  int valor2 = (fVE-(int)fVE)*100;
+		  if(cData == 'O' || cData == 'o'){
+			  int valor1 = (int)fDistanciaO;
+			  int valor2 = (fDistanciaO-(int)fDistanciaO)*100;
 
-		  int valor3 = (int)fVD;
-		  int valor4 = (fVD-(int)fVD)*100;
+			  sprintf(cMostrar,"Distancia Percorrida: %d.%02dm \r \n ",valor1,valor2);
+		  }else if(cData == 'E' || cData == 'e'){
+			  float valE = ((float)ulPulsePerSecondE/FUROS)*10;
+			  float valD = ((float)ulPulsePerSecondE/FUROS)*10;
 
-		  sprintf(cMostrar,"MotorE: %d.%02d(%d) -- MotorD: %d.%02d(%d) \r \n ",
-				  valor1,valor2,(int)fPIDVal_E,valor3,valor4,(int)fPIDVal_D);
+			  int valor1 = (int)valE;
+			  int valor2 = (valE-(int)valE)*100;
+
+			  int valor3 = (int)valD;
+			  int valor4 = (valD-(int)valD)*100;
+
+			  sprintf(cMostrar,"EncoderE: %d.%02d RPS -- EncoderD: %d.%02d RPS \r \n ",valor1,valor2,valor3,valor4);
+		  }else{
+			  cData == 'M';
+			  int valor1 = (int)fVE;
+			  int valor2 = (fVE-(int)fVE)*100;
+
+			  int valor3 = (int)fVD;
+			  int valor4 = (fVD-(int)fVD)*100;
+
+			  sprintf(cMostrar,"MotorE: %d.%02d m/s -- MotorD: %d.%02d m/s \r \n ",valor1,valor2,valor3,valor4);
+		  }
 	  }
-
 	  HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 
@@ -447,7 +461,7 @@ void FunctionOdometria(void *argument)
 	  fSD = fSD + ((fVelocidadeD+fVelocidadeE)/2)*cos(fTeta);
 	  fSE = fSE + ((fVelocidadeD+fVelocidadeE)/2)*sin(fTeta);
 
-	  fDistancia = sqrt(pow(fSD,2) + pow(fSE,2));
+	  fDistanciaO = sqrt(pow(fSD,2) + pow(fSE,2));
 	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
   }

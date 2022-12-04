@@ -65,8 +65,8 @@ void Error_Handler(void);
 #define Encoder_E_GPIO_Port GPIOA
 #define LED1_Pin GPIO_PIN_5
 #define LED1_GPIO_Port GPIOA
-#define HC05_TX_Pin GPIO_PIN_4
-#define HC05_TX_GPIO_Port GPIOC
+#define HC05_RX_Pin GPIO_PIN_4
+#define HC05_RX_GPIO_Port GPIOC
 #define S3_Pin GPIO_PIN_5
 #define S3_GPIO_Port GPIOC
 #define Encoder_D_Pin GPIO_PIN_12
@@ -81,8 +81,8 @@ void Error_Handler(void);
 #define IN1_GPIO_Port GPIOA
 #define IN2_Pin GPIO_PIN_9
 #define IN2_GPIO_Port GPIOA
-#define HC05_RX_Pin GPIO_PIN_10
-#define HC05_RX_GPIO_Port GPIOA
+#define HC05_TX_Pin GPIO_PIN_10
+#define HC05_TX_GPIO_Port GPIOA
 #define S2_Pin GPIO_PIN_12
 #define S2_GPIO_Port GPIOA
 #define Trig_Pin GPIO_PIN_15
