@@ -1,16 +1,21 @@
 /* USER CODE BEGIN Header */
-/* *********************************************************************************** */
-/* File name: seguidorLinha.c */
-/* File description:
-/*
-/*
-/*
-/*
-/* Author name: Ramiro; Djalma
-/* Creation date:
-/*
-/* Revision date:
-/* *********************************************************************************** */
+/* ***********************************************************************************
+*File name: seguidorLinha.c
+*
+*File description:
+*
+* Projeto da disciplina IM420X com foco na utilização de Sistema Operacional em Tempo Real (RTOS)
+* para gerenciamento de tarefas. O presente trabalho teve como finalidade desenvolver um veículo seguidor de linhas capaz de,
+* atravez de sensores, evitar colisões.
+*
+* Author name:
+*				Ramiro Romankevicius Costa.
+*				Djalma Santana Malta Neto.
+*
+* Creation date: 10/11/2022.
+*
+* Revision date: 05/12/2022.
+********************************************************************************** */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -57,7 +62,7 @@ uint8_t uiIsFirst = 1;
 //variáveis utilizadas pelos motores
 float fVelocidade = 0.030; // M/s
 float fReducao = 0.5;
-float fWAngularD, fWAngularE,fVE,fVD,fPIDVal_D, fPIDVal_E;
+float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E;
 
 //variáveis utilizadas pela odometria
 #define FUROS 20
@@ -151,7 +156,6 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-	HAL_UART_Receive_IT(&huart1, (uint8_t *)cData, sizeof(cData));
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -254,7 +258,16 @@ void FunctionComunica(void *argument)
 			  int valor2 = (fDistanciaO-(int)fDistanciaO)*100;
 
 			  sprintf(cMostrar,"Distancia Percorrida: %d.%02dm \r \n ",valor1,valor2);
-		  }else if(cData == 'E' || cData == 'e'){
+		  }else if(cData == 'V' || cData == 'v'){
+			  int valor1 = (int)fVelocidadeE;
+			  int valor2 = (fVelocidadeE-(int)fVelocidadeE)*100;
+
+			  int valor3 = (int)fVelocidadeD;
+			  int valor4 = (fVelocidadeD-(int)fVelocidadeD)*100;
+
+			  sprintf(cMostrar,"MotorE: %d.%02d m/s -- MotorD: %d.%02d m/s \r \n ",valor1,valor2,valor3,valor4);
+		  }else{
+			  cData = 'M';
 			  float valE = ((float)ulPulsePerSecondE/FUROS)*10;
 			  float valD = ((float)ulPulsePerSecondE/FUROS)*10;
 
@@ -264,16 +277,7 @@ void FunctionComunica(void *argument)
 			  int valor3 = (int)valD;
 			  int valor4 = (valD-(int)valD)*100;
 
-			  sprintf(cMostrar,"EncoderE: %d.%02d RPS -- EncoderD: %d.%02d RPS \r \n ",valor1,valor2,valor3,valor4);
-		  }else{
-			  cData == 'M';
-			  int valor1 = (int)fVE;
-			  int valor2 = (fVE-(int)fVE)*100;
-
-			  int valor3 = (int)fVD;
-			  int valor4 = (fVD-(int)fVD)*100;
-
-			  sprintf(cMostrar,"MotorE: %d.%02d m/s -- MotorD: %d.%02d m/s \r \n ",valor1,valor2,valor3,valor4);
+			  sprintf(cMostrar,"RPS_E: %d.%02d -- RPS_D: %d.%02d \r \n ",valor1,valor2,valor3,valor4);
 		  }
 	  }
 	  HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
@@ -424,11 +428,8 @@ void FunctionAtivarMotores(void *argument)
 	  ulPulsePerSecondE = ulPulsePerSecondE*10;
 	  ulPulsePerSecondD = ulPulsePerSecondD*10;
 
-	  fVE = ((((float)ulPulsePerSecondE*2*3.14)/20)*RAIO);
-	  fVD = ((((float)ulPulsePerSecondD*2*3.14)/20)*RAIO);
-
-	  fPIDVal_D = PID_D(fVD, fWAngularD);
-	  fPIDVal_E = PID_E(fVE, fWAngularE);
+	  fPIDVal_D = PID_D(fVelocidadeD, fWAngularD);
+	  fPIDVal_E = PID_E(fVelocidadeE, fWAngularE);
 
 	  htim3.Instance->CCR1 = fPIDVal_D;
 	  htim3.Instance->CCR2 = fPIDVal_E;
@@ -474,6 +475,7 @@ void FunctionOdometria(void *argument)
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	if(htim == &htim1){//ultrassonico
 		if(uiIsFirst){
+			fDistancia = 0;
 			lValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
 			uiIsFirst=0;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_FALLING);
