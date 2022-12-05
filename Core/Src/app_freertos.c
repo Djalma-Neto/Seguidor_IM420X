@@ -60,25 +60,27 @@ float fDiferenca, fDistancia;
 uint8_t uiIsFirst = 1;
 
 //variáveis utilizadas pelos motores
-float fVelocidade = 0.030; // M/s
+float fVelocidade = 0.0031; // M/s
 float fReducao = 0.5;
 float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E;
 
 //variáveis utilizadas pela odometria
 #define FUROS 20
-#define RAIO 0.00325
+#define RAIO 0.0325
 #define COMPRIMENTO 0.12
 #define LARGURA 0.028
+#define PI 3.141516
+#define fTs 0.1
 
-float fTeta, fSD, fSE, fDistanciaO;
+float fTeta, fX, fY, fDistanciaO;
 
 // encoder_Esquerdo
-unsigned long ulPulsePerSecondE;
-float fVelocidadeE;
+unsigned long ulPulsesE;
+float fWE;
 
 // encoder_Direito
-unsigned long ulPulsePerSecondD;
-float fVelocidadeD;
+unsigned long ulPulsesD;
+float fWD;
 
 //variáveis utilizadas pelo seguidor
 uint32_t uiStart = 0;
@@ -249,7 +251,7 @@ void FunctionComunica(void *argument)
 		  int dist1 = (int)fDistancia;
 		  int dist2 = (fDistancia-(int)fDistancia)*100;
 
-		  sprintf(cMostrar,"Blockeado: %d.%02d\r \n ",dist1,dist2);
+		  sprintf(cMostrar,"Blockeado: %d.%02d \r \n ",dist1,dist2);
 	  } else if(!uiStart){
 		  sprintf(cMostrar,"Aguardando Start!! \r \n ");
 	  } else{
@@ -259,17 +261,17 @@ void FunctionComunica(void *argument)
 
 			  sprintf(cMostrar,"Distancia Percorrida: %d.%02dm \r \n ",valor1,valor2);
 		  }else if(cData == 'V' || cData == 'v'){
-			  int valor1 = (int)fVelocidadeE;
-			  int valor2 = (fVelocidadeE-(int)fVelocidadeE)*100;
+			  int valor1 = (int)fWE;
+			  int valor2 = (fWE-(int)fWE)*100;
 
-			  int valor3 = (int)fVelocidadeD;
-			  int valor4 = (fVelocidadeD-(int)fVelocidadeD)*100;
+			  int valor3 = (int)fWD;
+			  int valor4 = (fWD-(int)fWD)*100;
 
 			  sprintf(cMostrar,"MotorE: %d.%02d m/s -- MotorD: %d.%02d m/s \r \n ",valor1,valor2,valor3,valor4);
 		  }else{
 			  cData = 'M';
-			  float valE = ((float)ulPulsePerSecondE/FUROS)*10;
-			  float valD = ((float)ulPulsePerSecondE/FUROS)*10;
+			  float valE = ((float)ulPulsesE/FUROS)*10;
+			  float valD = ((float)ulPulsesD/FUROS)*10;
 
 			  int valor1 = (int)valE;
 			  int valor2 = (valE-(int)valE)*100;
@@ -354,6 +356,9 @@ void FunctionSeguidor(void *argument)
     		uiCountSeguidor++;
 		}
     }else{
+    	if(uiCountSeguidor >= 50){
+    		uiBloqueado = 1;
+    	}
     	fWAngularD = 0;
 		fWAngularE = 0;
     }
@@ -379,17 +384,17 @@ void FunctionAtivarMotores(void *argument)
 	sPID_D pid_D;
 	sPID_E pid_E;
 
-	pid_E.fKpE = 800;
-	pid_E.fKiE = 2;
-	pid_E.fKdE = 0;
+	pid_E.fKpE = 500;
+	pid_E.fKiE = 10;
+	pid_E.fKdE = 0.001;
 	pid_E.fTsE = 200000;
 	pid_E.fOutminE = 0;
 	pid_E.fOutmaxE = 100;
 	PID_init_E(&pid_E);
 
-	pid_D.fKpD = 800;
-	pid_D.fKiD = 2;
-	pid_D.fKdD = 0;
+	pid_D.fKpD = 500;
+	pid_D.fKiD = 10;
+	pid_D.fKdD = 0.001;
 	pid_D.fTsD = 200000;
 	pid_D.fOutminD = 0;
 	pid_D.fOutmaxD = 100;
@@ -399,37 +404,22 @@ void FunctionAtivarMotores(void *argument)
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
-	  if(fWAngularD && fWAngularE){
-		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
-		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
+	  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
+	  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
-		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
-		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
-	  }else if(!fWAngularD && !fWAngularE){
+	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
+	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
+
+	  if(!fWAngularD && !fWAngularE){
 		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
 		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
 		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
-	  }/*else if(!fWAngularD && fWAngularE){
-		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
-		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
+	  }
 
-		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
-		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
-	  }else if(fWAngularD && !fWAngularE){
-		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
-		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
-
-		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
-		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
-	  }*/
-
-	  ulPulsePerSecondE = ulPulsePerSecondE*10;
-	  ulPulsePerSecondD = ulPulsePerSecondD*10;
-
-	  fPIDVal_D = PID_D(fVelocidadeD, fWAngularD);
-	  fPIDVal_E = PID_E(fVelocidadeE, fWAngularE);
+	  fPIDVal_E = PID_E(fWE, fWAngularE);
+	  fPIDVal_D = PID_D(fWD, fWAngularD);
 
 	  htim3.Instance->CCR1 = fPIDVal_D;
 	  htim3.Instance->CCR2 = fPIDVal_E;
@@ -457,12 +447,16 @@ void FunctionOdometria(void *argument)
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 100);
-	  fTeta = fTeta + (((fVelocidadeD-fVelocidadeE)/(COMPRIMENTO+LARGURA))*1);
 
-	  fSD = fSD + ((fVelocidadeD+fVelocidadeE)/2)*cos(fTeta);
-	  fSE = fSE + ((fVelocidadeD+fVelocidadeE)/2)*sin(fTeta);
+	  float fVE = fWE*RAIO;
+	  float fVD = fWE*RAIO;
 
-	  fDistanciaO = sqrt(pow(fSD,2) + pow(fSE,2));
+	  fTeta = fTeta + ((fVD-fVE)/(COMPRIMENTO+LARGURA))*fTs;
+
+	  fX = fX + ((fVD+fVE)/2)*cos(fTeta)*fTs;
+	  fY = fY + ((fVD+fVE)/2)*sin(fTeta)*fTs;
+
+	  fDistanciaO = sqrt(pow(fX,2) + pow(fY,2));
 	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
   }
@@ -486,7 +480,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			fDiferenca = (float)((unsigned)lValor2-(unsigned)lValor1);
 			fDistancia = ((fDiferenca/2)*0.0001)*340/2 < 100?((fDiferenca/2)*0.0001)*340/2 : fDistancia;
 
-			uiBloqueado = (fDistancia>2 && fDistancia<20) ? 1 : 0;
+			//uiBloqueado = (fDistancia>2 && fDistancia<20) ? 1 : 0;
+			uiBloqueado = 0;
 
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_RISING);
 			__HAL_TIM_DISABLE_IT(htim, TIM_CHANNEL_3);
@@ -495,11 +490,12 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
 	if(htim == &htim6){
-		ulPulsePerSecondE = __HAL_TIM_GET_COUNTER(&htim2);
-		ulPulsePerSecondD = __HAL_TIM_GET_COUNTER(&htim5);
+		ulPulsesE = __HAL_TIM_GET_COUNTER(&htim2);
+		ulPulsesD = __HAL_TIM_GET_COUNTER(&htim5);
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
-		fVelocidadeE = ((float)ulPulsePerSecondE/FUROS)*2*3.1415*RAIO;
-		fVelocidadeD = ((float)ulPulsePerSecondD/FUROS)*2*3.1415*RAIO;
+		fWE = (((float)ulPulsesE/FUROS)*2*PI)/fTs;
+		fWD = (((float)ulPulsesD/FUROS)*2*PI)/fTs;
 
 		__HAL_TIM_SET_COUNTER(&htim2,0);
 		__HAL_TIM_SET_COUNTER(&htim5,0);
