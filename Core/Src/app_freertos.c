@@ -400,7 +400,7 @@ void FunctionAtivarMotores(void *argument)
 	pid_E.fKpE = 500;
 	pid_E.fKiE = 10;
 	pid_E.fKdE = 0.001;
-	pid_E.fTsE = 200000;
+	pid_E.fTsE = 100;
 	pid_E.fOutminE = 0;
 	pid_E.fOutmaxE = 100;
 	PID_init_E(&pid_E);
@@ -408,7 +408,7 @@ void FunctionAtivarMotores(void *argument)
 	pid_D.fKpD = 500;
 	pid_D.fKiD = 10;
 	pid_D.fKdD = 0.001;
-	pid_D.fTsD = 200000;
+	pid_D.fTsD = 100;
 	pid_D.fOutminD = 0;
 	pid_D.fOutmaxD = 100;
 	PID_init_D(&pid_D);
@@ -435,12 +435,13 @@ void FunctionAtivarMotores(void *argument)
 	  }
 
 	  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
+	  float fVE = fWE*RAIO;
+	  float fVD = fWE*RAIO;
+	  fPIDVal_E = PID_E(fVE, fWAngularE);
+	  fPIDVal_D = PID_D(fVD, fWAngularD);
 
-	  fPIDVal_E = PID_E(fWE, fWAngularE);
-	  fPIDVal_D = PID_D(fWD, fWAngularD);
-
-	  htim3.Instance->CCR1 = fPIDVal_D;
 	  htim3.Instance->CCR2 = fPIDVal_E;
+	  htim3.Instance->CCR1 = fPIDVal_D;
 
 	  osSemaphoreRelease(SemaphoreMovimentaHandle);
 	  osDelay(100);
@@ -478,7 +479,7 @@ void FunctionOdometria(void *argument)
 	  fY = fY + ((fVD+fVE)/2)*sin(fTeta)*fTs;
 
 	  /*a distancia é dada pela relação da raiz da doma dos quadrados de X e Y*/
-	  fDistanciaO = sqrt(pow(fX,2) + pow(fY,2));
+	  fDistanciaO = (sqrt(pow(fX,2) + pow(fY,2)))/0.75;
 	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
   }

@@ -11,7 +11,7 @@ void PID_init_D(sPID_D *par) {
 	fKpD = par->fKpD;
 	fKiD = par->fKiD;
 	fKdD = par->fKdD;
-	fTsD = (par->fTsD) / 1000;
+	fTsD = par->fTsD;
 	fOutminD = par->fOutminD;
 	fOutmaxD = par->fOutmaxD;
 }
@@ -19,7 +19,7 @@ void PID_init_E(sPID_E *par) {
 	fKpE = par->fKpE;
 	fKiE = par->fKiE;
 	fKdE = par->fKdE;
-	fTsE = (par->fTsE) / 1000;
+	fTsE = par->fTsE;
 	fOutminE = par->fOutminE;
 	fOutmaxE = par->fOutmaxE;
 }
