@@ -2,12 +2,9 @@
 /* ***********************************************************************************
 *File name: seguidorLinha.c
 *
-*File description:
-*
-* Projeto da disciplina IM420X com foco na utilização de Sistema Operacional em Tempo Real (RTOS)
-* para gerenciamento de tarefas. O presente trabalho teve como finalidade desenvolver um veículo seguidor de linhas capaz de,
-* atravez de sensores, evitar colisões.
-*
+*File description:  Projeto da disciplina IM420X com foco na utilização de Sistema Operacional em Tempo Real (RTOS)
+* 					para gerenciamento de tarefas. O presente trabalho teve como finalidade desenvolver um veículo
+* 					seguidor de linhas capaz de,atravez de sensores, evitar colisões.
 * Author name:
 *				Ramiro Romankevicius Costa.
 *				Djalma Santana Malta Neto.
@@ -53,18 +50,18 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
-//variáveis utilizadas pelo sensor ultrassônico
+/*variáveis utilizadas pelo sensor ultrassônico*/
 long lValor1;
 long lValor2;
 float fDiferenca, fDistancia;
 uint8_t uiIsFirst = 1;
 
-//variáveis utilizadas pelos motores
+/*variáveis utilizadas pelos motores*/
 float fVelocidade = 0.0031; // M/s
 float fReducao = 0.5;
 float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E;
 
-//variáveis utilizadas pela odometria
+/*variáveis utilizadas pela odometria*/
 #define FUROS 20
 #define RAIO 0.0325
 #define COMPRIMENTO 0.12
@@ -74,20 +71,20 @@ float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E;
 
 float fTeta, fX, fY, fDistanciaO;
 
-// encoder_Esquerdo
+/*encoder_Esquerdo*/
 unsigned long ulPulsesE;
 float fWE;
 
-// encoder_Direito
+/*encoder_Direito*/
 unsigned long ulPulsesD;
 float fWD;
 
-//variáveis utilizadas pelo seguidor
+/*variáveis utilizadas pelo seguidor*/
 uint32_t uiStart = 0;
 uint32_t uiBloqueado = 0;
 uint32_t uiCountSeguidor = 0;
 
-//variáveis utilizadas para comunicação
+/*variáveis utilizadas para comunicação*/
 char cMostrar[100];
 char cData='M';
 
@@ -246,6 +243,11 @@ void FunctionComunica(void *argument)
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
+
+	  /*
+	   * Captura de valor vindo do terminal remoto bluetooth podem=ndo ser "M", "O" ou "V"
+	   * Sendo "M" RPS de cada roda, "O" dados da odometria e "V" deslocamento em m/s de cada roda
+	   */
 	  HAL_UART_Receive(&huart1, (uint8_t *)&cData, sizeof(cData),100);
 	  if(uiBloqueado){
 		  int dist1 = (int)fDistancia;
@@ -282,6 +284,8 @@ void FunctionComunica(void *argument)
 			  sprintf(cMostrar,"RPS_E: %d.%02d -- RPS_D: %d.%02d \r \n ",valor1,valor2,valor3,valor4);
 		  }
 	  }
+
+	  /*transmite a informação via UART e via BlueTooth*/
 	  HAL_UART_Transmit(&huart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 	  HAL_UART_Transmit(&hlpuart1, (uint8_t*)cMostrar, sizeof(cMostrar), 100);
 
@@ -304,6 +308,7 @@ void FunctionSeguidor(void *argument)
   /* Infinite loop */
   for(;;)
   {
+	  /*Faz a leitura dos dados dos sensores*/
     uint8_t uiS2 = HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin);
     uint8_t uiS3 = HAL_GPIO_ReadPin(S3_GPIO_Port, S3_Pin);
     uint8_t uiS4 = HAL_GPIO_ReadPin(S4_GPIO_Port, S4_Pin);
@@ -314,13 +319,14 @@ void FunctionSeguidor(void *argument)
 
     osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
 
-    if(uiBloqueado){
+
+    if(uiBloqueado){/*caso blockeado...*/
     	fWAngularD = 0;
 		fWAngularE = 0;
 		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_SET);
 		osDelay(500);
 		HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
-    }else if(uiBTN){
+    }else if(uiBTN){/*caso BTN start pressionado...*/
     	uiStart = uiStart?0:1;
     	uiCountSeguidor = 0;
     	fWAngularD = 0;
@@ -329,20 +335,20 @@ void FunctionSeguidor(void *argument)
     	osDelay(500);
     	HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
     	osDelay(500);
-    }else if(uiStart && uiCountSeguidor < 50){
-    	if(uiS2 && uiS3 && !uiS4){
+    }else if(uiStart && uiCountSeguidor < 50){/*caso start pressionado e o veículo esteja na linha...*/
+    	if(uiS2 && uiS3 && !uiS4){/*caso linha no sensor direito...*/
     		uiCountSeguidor = 0;
 			fWAngularE = fVelocidade;
 			fWAngularD = 0;
-		}else if(!uiS2 && uiS3 && uiS4){
+		}else if(!uiS2 && uiS3 && uiS4){/*caso linha no sensor esquerdo...*/
 			uiCountSeguidor = 0;
 			fWAngularE = 0;
 			fWAngularD = fVelocidade;
-		}else if(uiS2 && !uiS3 && uiS4){
+		}else if(uiS2 && !uiS3 && uiS4){/*caso linha no sensor do meio...*/
 			uiCountSeguidor = 0;
 			fWAngularD = fVelocidade;
 			fWAngularE = fVelocidade;
-		}else if(!uiS2 && !uiS3 && !uiS4){
+		}else if(!uiS2 && !uiS3 && !uiS4){/*caso linha nos tres sensores(Fim de curso)...*/
 			uiCountSeguidor = 0;
 			fWAngularD = 0;
 			fWAngularE = 0;
@@ -352,12 +358,16 @@ void FunctionSeguidor(void *argument)
 			HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
 			osDelay(100);
 		}
-    	if(uiS2 && uiS3 && uiS4){
+    	/*
+    	 * Caso o veículo saia da linha ele permanece fazendo a ultima manobra de correção, enquanto não encontrar  a linha
+    	 * o contador "uiCountSeguidor" irá incrementar e quando exceder o valor 50 o veículo ira para o modo blockeado
+    	 */
+    	if(uiS2 && uiS3 && uiS4){/*caso sensores fora da linha(fora da trajetória)...*/
     		uiCountSeguidor++;
 		}
     }else{
     	if(uiCountSeguidor >= 50){
-    		uiBloqueado = 1;
+    		//uiBloqueado = 1;
     	}
     	fWAngularD = 0;
 		fWAngularE = 0;
@@ -378,9 +388,12 @@ void FunctionSeguidor(void *argument)
 void FunctionAtivarMotores(void *argument)
 {
   /* USER CODE BEGIN FunctionAtivarMotores */
+
+	/*Iniciando o PWM*/
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 
+	/*Iniciando o PID com os devidos ganhos*/
 	sPID_D pid_D;
 	sPID_E pid_E;
 
@@ -404,12 +417,15 @@ void FunctionAtivarMotores(void *argument)
   for(;;)
   {
 	  osSemaphoreAcquire(SemaphoreMovimentaHandle, 200);
+
+	  /*seta o IN1, IN2, IN3 e IN4 de forma que o veículo siga em frente*/
 	  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 1);
 	  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
 	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
 
+	  /*caso os valores referentes à velocidade dos dois motores sejam "0" o veículo deve parar imediatamente*/
 	  if(!fWAngularD && !fWAngularE){
 		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
 		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
@@ -417,6 +433,8 @@ void FunctionAtivarMotores(void *argument)
 		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
 	  }
+
+	  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
 
 	  fPIDVal_E = PID_E(fWE, fWAngularE);
 	  fPIDVal_D = PID_D(fWD, fWAngularD);
@@ -448,14 +466,18 @@ void FunctionOdometria(void *argument)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 100);
 
+	  /* Primeiro é calculado a Velocidade de cada roda em m/s */
 	  float fVE = fWE*RAIO;
 	  float fVD = fWE*RAIO;
 
+	  /*Posteriormente é calculado o valor Teta*/
 	  fTeta = fTeta + ((fVD-fVE)/(COMPRIMENTO+LARGURA))*fTs;
 
+	  /*Assim é calculado o valor de deslocamento em X e Y*/
 	  fX = fX + ((fVD+fVE)/2)*cos(fTeta)*fTs;
 	  fY = fY + ((fVD+fVE)/2)*sin(fTeta)*fTs;
 
+	  /*a distancia é dada pela relação da raiz da doma dos quadrados de X e Y*/
 	  fDistanciaO = sqrt(pow(fX,2) + pow(fY,2));
 	  osSemaphoreRelease(SemaphoreComunicaHandle);
 	  osDelay(100);
@@ -466,47 +488,61 @@ void FunctionOdometria(void *argument)
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
+/*interrupção para captura do ultrassônico*/
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	if(htim == &htim1){//ultrassonico
+		/*a interrupção é disparada na borda de subida onde pega o primeiro valor do timer*/
 		if(uiIsFirst){
 			fDistancia = 0;
 			lValor1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
+			/*
+			 * Setando o "uiIsFirst" como "0" e forçando a captura da borda de descida, é esperado que
+			 * na proxima interrupção seja pego o valor do timer referente ao tempo que o ECHO ficou em alta
+			 */
 			uiIsFirst=0;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_FALLING);
 		}else{
+			/*pegando o segundo valor do timer*/
 			lValor2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3);
-			uiIsFirst=1;
 
+			/*calculando a diferença entre a borda de subida e descida*/
 			fDiferenca = (float)((unsigned)lValor2-(unsigned)lValor1);
 			fDistancia = ((fDiferenca/2)*0.0001)*340/2 < 100?((fDiferenca/2)*0.0001)*340/2 : fDistancia;
 
-			//uiBloqueado = (fDistancia>2 && fDistancia<20) ? 1 : 0;
+			/*
+			 * caso valor superior a 0 e inferior a 20 o veículo será blockeado
+			 * o valor deve ser superior a 0 pois, caso não haja captura, o valo será "0" e
+			 * não necessariamente deve ser blockeado
+			 * */
+			uiBloqueado = (fDistancia>0 && fDistancia<20) ? 1 : 0;
 			uiBloqueado = 0;
 
+			/*seta a captura para borda de subida e "uiIsFirst" para primeiro valor novamente*/
+			uiIsFirst=1;
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_3, TIM_INPUTCHANNELPOLARITY_RISING);
 			__HAL_TIM_DISABLE_IT(htim, TIM_CHANNEL_3);
 		}
 	}
 }
+
+/*interrupção a cada 100ms para calcular o valor do encoder que incrementa o contador do TIMER*/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
 	if(htim == &htim6){
+		/*pegando os valores do contador do timer*/
 		ulPulsesE = __HAL_TIM_GET_COUNTER(&htim2);
 		ulPulsesD = __HAL_TIM_GET_COUNTER(&htim5);
+
+		/*LED para verificar o correto funcionamento da interrupção*/
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
+		/*Calculando a velocidade em m/s de acordo ao "fTs" que é a taxa de amostragem*/
 		fWE = (((float)ulPulsesE/FUROS)*2*PI)/fTs;
 		fWD = (((float)ulPulsesD/FUROS)*2*PI)/fTs;
 
+		/*resetando o contador dos timers*/
 		__HAL_TIM_SET_COUNTER(&htim2,0);
 		__HAL_TIM_SET_COUNTER(&htim5,0);
 	}
-}
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if(huart == &huart1)
-  {
-	  //
-  }
 }
 
 /* USER CODE END Application */

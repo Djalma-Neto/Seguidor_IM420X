@@ -1,9 +1,8 @@
-../Core/Src/app_freertos.c:159:6:MX_FREERTOS_Init	8	static
-../Core/Src/app_freertos.c:219:6:FunctionUltrassom	16	static
-../Core/Src/app_freertos.c:242:6:FunctionComunica	80	static
-../Core/Src/app_freertos.c:301:6:FunctionSeguidor	24	static
-../Core/Src/app_freertos.c:378:6:FunctionAtivarMotores	64	static
-../Core/Src/app_freertos.c:440:6:FunctionOdometria	40	static
-../Core/Src/app_freertos.c:469:6:HAL_TIM_IC_CaptureCallback	16	static
-../Core/Src/app_freertos.c:491:6:HAL_TIM_PeriodElapsedCallback	16	static
-../Core/Src/app_freertos.c:504:6:HAL_UART_RxCpltCallback	16	static
+../Core/Src/app_freertos.c:156:6:MX_FREERTOS_Init	8	static
+../Core/Src/app_freertos.c:216:6:FunctionUltrassom	16	static
+../Core/Src/app_freertos.c:239:6:FunctionComunica	80	static
+../Core/Src/app_freertos.c:305:6:FunctionSeguidor	24	static
+../Core/Src/app_freertos.c:388:6:FunctionAtivarMotores	64	static
+../Core/Src/app_freertos.c:458:6:FunctionOdometria	40	static
+../Core/Src/app_freertos.c:492:6:HAL_TIM_IC_CaptureCallback	16	static
+../Core/Src/app_freertos.c:529:6:HAL_TIM_PeriodElapsedCallback	16	static
