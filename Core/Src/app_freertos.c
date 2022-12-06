@@ -372,7 +372,7 @@ void FunctionSeguidor(void *argument)
 		}
     }else{
     	if(uiCountSeguidor >= 50){
-    		//uiBloqueado = 1;
+    		uiBloqueado = 1;
     	}
     	fWAngularD = 0;
 		fWAngularE = 0;
@@ -538,7 +538,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			 * não necessariamente deve ser blockeado
 			 * */
 			uiBloqueado = (fDistancia>0 && fDistancia<20) ? 1 : 0;
-			uiBloqueado = 0;
 
 			/*seta a captura para borda de subida e "uiIsFirst" para primeiro valor novamente*/
 			uiIsFirst=1;
