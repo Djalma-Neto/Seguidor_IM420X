@@ -220,6 +220,7 @@ void FunctionUltrassom(void *argument)
   /* Infinite loop */
 	for(;;)
 	{
+		/*É dado um pulso inicial no pino do trigge por 10ms*/
 		__HAL_TIM_ENABLE_IT(&htim1, TIM_CHANNEL_3);
 		HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 1);
 		osDelay(10);
@@ -245,6 +246,7 @@ void FunctionComunica(void *argument)
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 200);
 
 	  /*
+	   * Baseado em notas de aula, e aconselhamento com o aluno Christian da Rocha Iardino sobre uso da interrupção com o modulo HC-05
 	   * Captura de valor vindo do terminal remoto bluetooth podem=ndo ser "M", "O" ou "V"
 	   * Sendo "M" RPS de cada roda, "O" dados da odometria e "V" deslocamento em m/s de cada roda
 	   */
@@ -305,6 +307,9 @@ void FunctionComunica(void *argument)
 void FunctionSeguidor(void *argument)
 {
   /* USER CODE BEGIN FunctionSeguidor */
+
+	/* Etapa baseado em notas de aula. */
+
   /* Infinite loop */
   for(;;)
   {
@@ -389,6 +394,8 @@ void FunctionAtivarMotores(void *argument)
 {
   /* USER CODE BEGIN FunctionAtivarMotores */
 
+	/* baseado em: https://deepbluembedded.com/stm32-pwm-example-timer-pwm-mode-tutorial/ */
+
 	/*Iniciando o PWM*/
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
@@ -439,9 +446,10 @@ void FunctionAtivarMotores(void *argument)
 		  fPIDVal_E = 0;
 		  fPIDVal_D = 0;
 	  }else{
-		  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
-		  fVE = fWE*RAIO;
-		  fVD = fWD*RAIO;
+		  /*
+		   * A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder
+		   * Adaptado de: https://embeddedexpert.io/?p=960,  https://embeddedexpert.io/?p=968 https://embeddedexpert.io/?p=1035
+		   */
 		  fPIDVal_E = PID_E(fVE, fWAngularE);
 		  fPIDVal_D = PID_D(fVD, fWAngularD);
 
@@ -465,6 +473,12 @@ void FunctionAtivarMotores(void *argument)
 void FunctionOdometria(void *argument)
 {
   /* USER CODE BEGIN FunctionOdometria */
+
+	/*
+	 * Notas de aula e referência:
+	 * R. Siegwart, D. Scaramuzza, I. R. Nourbakhsh e R. C. Arkin, Introduction to Autonomous Mobile Robots, 2nd Edition ed., Cambridge, Massachusetts: Mit Press, 2011..
+	 */
+
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start(&htim2);
 	HAL_TIM_Base_Start(&htim5);
@@ -473,11 +487,7 @@ void FunctionOdometria(void *argument)
   {
 	  osSemaphoreAcquire(SemaphoreComunicaHandle, 100);
 
-	  /* Primeiro é calculado a Velocidade de cada roda em m/s */
-	  float fVE = fWE*RAIO;
-	  float fVD = fWD*RAIO;
-
-	  /*Posteriormente é calculado o valor Teta*/
+	  /*Primeiro é calculado o valor Teta*/
 	  fTeta = fTeta + ((fVD-fVE)/(COMPRIMENTO+LARGURA))*fTs;
 
 	  /*Assim é calculado o valor de deslocamento em X e Y*/
@@ -497,7 +507,13 @@ void FunctionOdometria(void *argument)
 
 /*interrupção para captura do ultrassônico*/
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if(htim == &htim1){//ultrassonico
+
+	/*
+	 * baseado em: https://controllerstech.com/hcsr04-ultrasonic-sensor-and-stm32
+	 * Auxilio do aluno Giácomo Antonio Dollevedo, no uso e configuração dos timers.
+	 */
+
+	if(htim == &htim1){
 		/*a interrupção é disparada na borda de subida onde pega o primeiro valor do timer*/
 		if(uiIsFirst){
 			fDistancia = 0;
@@ -534,6 +550,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 /*interrupção a cada 100ms para calcular o valor do encoder que incrementa o contador do TIMER*/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
+
+	/* baseado em notas de aula */
+
 	if(htim == &htim6){
 		/*pegando os valores do contador do timer*/
 		ulPulsesE = __HAL_TIM_GET_COUNTER(&htim2);
@@ -542,9 +561,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
 		/*LED para verificar o correto funcionamento da interrupção*/
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
-		/*Calculando a velocidade em m/s de acordo ao "fTs" que é a taxa de amostragem*/
+		/*Calculando a velocidade em rad/s de acordo ao "fTs" que é a taxa de amostragem*/
 		fWE = (((float)ulPulsesE/FUROS)*2*PI)/fTs;
 		fWD = (((float)ulPulsesD/FUROS)*2*PI)/fTs;
+
+		/* Aqui é calculado a Velocidade de cada roda em m/s */
+		fVE = fWE*RAIO;
+		fVD = fWD*RAIO;
 
 		/*resetando o contador dos timers*/
 		__HAL_TIM_SET_COUNTER(&htim2,0);
