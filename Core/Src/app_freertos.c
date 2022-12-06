@@ -57,9 +57,9 @@ float fDiferenca, fDistancia;
 uint8_t uiIsFirst = 1;
 
 /*variáveis utilizadas pelos motores*/
-float fVelocidade = 0.0031; // M/s
+float fVelocidade = 0.2; // M/s
 float fReducao = 0.5;
-float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E;
+float fWAngularD, fWAngularE,fPIDVal_D, fPIDVal_E, fVE,fVD;
 
 /*variáveis utilizadas pela odometria*/
 #define FUROS 20
@@ -397,17 +397,17 @@ void FunctionAtivarMotores(void *argument)
 	sPID_D pid_D;
 	sPID_E pid_E;
 
-	pid_E.fKpE = 500;
-	pid_E.fKiE = 10;
-	pid_E.fKdE = 0.001;
+	pid_E.fKpE = 15;
+	pid_E.fKiE = 0.8;
+	pid_E.fKdE = 0.0001;
 	pid_E.fTsE = 100;
 	pid_E.fOutminE = 0;
 	pid_E.fOutmaxE = 100;
 	PID_init_E(&pid_E);
 
-	pid_D.fKpD = 500;
-	pid_D.fKiD = 10;
-	pid_D.fKdD = 0.001;
+	pid_D.fKpD = 15;
+	pid_D.fKiD = 0.8;
+	pid_D.fKdD = 0.0001;
 	pid_D.fTsD = 100;
 	pid_D.fOutminD = 0;
 	pid_D.fOutmaxD = 100;
@@ -425,21 +425,27 @@ void FunctionAtivarMotores(void *argument)
 	  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 	  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 1);
 
-	  /*caso os valores referentes à velocidade dos dois motores sejam "0" o veículo deve parar imediatamente*/
+	  /*
+	   * caso os valores referentes à velocidade dos dois motores sejam "0" o veículo deve parar imediatamente
+	   * caso contrario deve prosseguir normalmente
+	   */
 	  if(!fWAngularD && !fWAngularE){
 		  HAL_GPIO_WritePin(IN1_GPIO_Port, IN1_Pin, 0);
 		  HAL_GPIO_WritePin(IN2_GPIO_Port, IN2_Pin, 0);
 
 		  HAL_GPIO_WritePin(IN3_GPIO_Port, IN3_Pin, 0);
 		  HAL_GPIO_WritePin(IN4_GPIO_Port, IN4_Pin, 0);
+
+		  fPIDVal_E = 0;
+		  fPIDVal_D = 0;
+	  }else{
+		  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
+		  fVE = fWE*RAIO;
+		  fVD = fWD*RAIO;
+		  fPIDVal_E = PID_E(fVE, fWAngularE);
+		  fPIDVal_D = PID_D(fVD, fWAngularD);
+
 	  }
-
-	  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
-	  float fVE = fWE*RAIO;
-	  float fVD = fWE*RAIO;
-	  fPIDVal_E = PID_E(fVE, fWAngularE);
-	  fPIDVal_D = PID_D(fVD, fWAngularD);
-
 	  htim3.Instance->CCR2 = fPIDVal_E;
 	  htim3.Instance->CCR1 = fPIDVal_D;
 
@@ -469,7 +475,7 @@ void FunctionOdometria(void *argument)
 
 	  /* Primeiro é calculado a Velocidade de cada roda em m/s */
 	  float fVE = fWE*RAIO;
-	  float fVD = fWE*RAIO;
+	  float fVD = fWD*RAIO;
 
 	  /*Posteriormente é calculado o valor Teta*/
 	  fTeta = fTeta + ((fVD-fVE)/(COMPRIMENTO+LARGURA))*fTs;
