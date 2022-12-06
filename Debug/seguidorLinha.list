@@ -27,9 +27,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  00020080  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0001f843  00000000  00000000  000200b0  2**0
+ 12 .debug_info   0001f844  00000000  00000000  000200b0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00003e04  00000000  00000000  0003f8f3  2**0
+ 13 .debug_abbrev 00003e04  00000000  00000000  0003f8f4  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  14 .debug_aranges 000018b0  00000000  00000000  000436f8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -37,13 +37,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_macro  00029936  00000000  00000000  000466d0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001c0b8  00000000  00000000  00070006  2**0
+ 17 .debug_line   0001c0ba  00000000  00000000  00070006  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    001076e5  00000000  00000000  0008c0be  2**0
+ 18 .debug_str    001076e5  00000000  00000000  0008c0c0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000050  00000000  00000000  001937a3  2**0
+ 19 .comment      00000050  00000000  00000000  001937a5  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00007394  00000000  00000000  001937f4  2**2
+ 20 .debug_frame  00007394  00000000  00000000  001937f8  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1378,6 +1378,7 @@ void FunctionUltrassom(void *argument)
   /* Infinite loop */
 	for(;;)
 	{
+		/*É dado um pulso inicial no pino do trigge por 10ms*/
 		__HAL_TIM_ENABLE_IT(&htim1, TIM_CHANNEL_3);
  8001060:	4b0e      	ldr	r3, [pc, #56]	; (800109c <FunctionUltrassom+0x4c>)
  8001062:	681b      	ldr	r3, [r3, #0]
@@ -1427,8 +1428,8 @@ void FunctionComunica(void *argument)
  80010ac:	21c8      	movs	r1, #200	; 0xc8
  80010ae:	4618      	mov	r0, r3
  80010b0:	f006 f9f8 	bl	80074a4 <osSemaphoreAcquire>
-
 	  /*
+	   * Baseado em notas de aula, e aconselhamento com o aluno Christian da Rocha Iardino sobre uso da interrupção com o modulo HC-05
 	   * Captura de valor vindo do terminal remoto bluetooth podem=ndo ser "M", "O" ou "V"
 	   * Sendo "M" RPS de cada roda, "O" dados da odometria e "V" deslocamento em m/s de cada roda
 	   */
@@ -1707,7 +1708,7 @@ void FunctionSeguidor(void *argument)
  800134e:	b084      	sub	sp, #16
  8001350:	af00      	add	r7, sp, #0
  8001352:	6078      	str	r0, [r7, #4]
-  /* USER CODE BEGIN FunctionSeguidor */
+
   /* Infinite loop */
   for(;;)
   {
@@ -2017,6 +2018,8 @@ void FunctionAtivarMotores(void *argument)
  800156e:	6078      	str	r0, [r7, #4]
   /* USER CODE BEGIN FunctionAtivarMotores */
 
+	/* baseado em: https://deepbluembedded.com/stm32-pwm-example-timer-pwm-mode-tutorial/ */
+
 	/*Iniciando o PWM*/
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
  8001570:	2100      	movs	r1, #0
@@ -2157,7 +2160,10 @@ void FunctionAtivarMotores(void *argument)
  8001662:	601a      	str	r2, [r3, #0]
  8001664:	e021      	b.n	80016aa <FunctionAtivarMotores+0x142>
 	  }else{
-		  /*A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder*/
+		  /*
+		   * A função "PID_E" e "PID_D" retorna o valor PWM para cada motor de acordo com a realimentação vinda do encoder
+		   * Adaptado de: https://embeddedexpert.io/?p=960,  https://embeddedexpert.io/?p=968 https://embeddedexpert.io/?p=1035
+		   */
 		  fPIDVal_E = PID_E(fVE, fWAngularE);
  8001666:	4b2b      	ldr	r3, [pc, #172]	; (8001714 <FunctionAtivarMotores+0x1ac>)
  8001668:	edd3 7a00 	vldr	s15, [r3]
@@ -2236,7 +2242,11 @@ void FunctionOdometria(void *argument)
  8001724:	b082      	sub	sp, #8
  8001726:	af00      	add	r7, sp, #0
  8001728:	6078      	str	r0, [r7, #4]
-  /* USER CODE BEGIN FunctionOdometria */
+	/*
+	 * Notas de aula e referência:
+	 * R. Siegwart, D. Scaramuzza, I. R. Nourbakhsh e R. C. Arkin, Introduction to Autonomous Mobile Robots, 2nd Edition ed., Cambridge, Massachusetts: Mit Press, 2011..
+	 */
+
 	HAL_TIM_Base_Start_IT(&htim6);
  800172a:	488b      	ldr	r0, [pc, #556]	; (8001958 <FunctionOdometria+0x238>)
  800172c:	f002 fec2 	bl	80044b4 <HAL_TIM_Base_Start_IT>
@@ -2482,7 +2492,12 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
  800198a:	b082      	sub	sp, #8
  800198c:	af00      	add	r7, sp, #0
  800198e:	6078      	str	r0, [r7, #4]
-	if(htim == &htim1){//ultrassonico
+	/*
+	 * baseado em: https://controllerstech.com/hcsr04-ultrasonic-sensor-and-stm32
+	 * Auxilio do aluno Giácomo Antonio Dollevedo, no uso e configuração dos timers.
+	 */
+
+	if(htim == &htim1){
  8001990:	687b      	ldr	r3, [r7, #4]
  8001992:	4a6b      	ldr	r2, [pc, #428]	; (8001b40 <HAL_TIM_IC_CaptureCallback+0x1b8>)
  8001994:	4293      	cmp	r3, r2
@@ -2696,6 +2711,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim){
  8001b6a:	b082      	sub	sp, #8
  8001b6c:	af00      	add	r7, sp, #0
  8001b6e:	6078      	str	r0, [r7, #4]
+
+	/* baseado em notas de aula */
+
 	if(htim == &htim6){
  8001b70:	687b      	ldr	r3, [r7, #4]
  8001b72:	4a4f      	ldr	r2, [pc, #316]	; (8001cb0 <HAL_TIM_PeriodElapsedCallback+0x148>)
